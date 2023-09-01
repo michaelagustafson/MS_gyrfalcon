@@ -1,0 +1,342 @@
+---
+title: "035_add2022data"
+author: "Michaela Gustafson"
+date: "2022-08-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Add 2022 Data
+
+This script (3.5) is to clean adn add the 2022 prey survey point count data to the already cleaned and final version of 2019 and 2021 point count data
+
+
+
+## LIBRARY
+Packages used for this code: 
+```{r library}
+library(here) # for file location
+library(dplyr) # general cleaning/manipulation
+library(lubridate) # for Julian date conversion
+library(tidyr) # general cleaning/manipulation
+library(hms) # for making column into a time format
+library(stringr) # for cleaning/manipulation
+```
+
+
+# Import 2022 data
+
+```{r obsimport}
+obs22 <- read.csv(here("data/obs22.csv"))
+env22 <- read.csv(here("data/env22.csv"))
+```
+
+
+
+### Import sunrise times and calculate minutes after sunrise for survey start time
+
+```{r sunimport}
+sun22 <- read.csv(here("data/sunrise_2022.csv"))
+```
+
+
+## CLEAN SUNRISE DATA
+
+First need add extra 0 to beginning of those with one less character so column 
+can be formatted in hour:min:sec
+
+
+```{r cleansun}
+
+# remove colons(:) first so that leading zero can be added
+sun22$sunrise <- base::gsub(":", "", sun22$sunrise) 
+
+# add 00 to end
+sun22$sunrise <- base::paste0(sun22$sunrise, "00")
+
+# add leading 0
+sun22$sunrise <- base::sprintf("%06d", as.numeric(sun22$sunrise)) 
+
+# separate sunrise times into columns for h:m:s
+sun22 <- tidyr::extract(sun22, 
+                        sunrise, 
+                        into = c("hr", "min", "sec"), 
+                        "(.{2})(.{2})(.{2})", 
+                        remove=FALSE)
+
+# paste h:m:s column together into another column and separate with ':'
+sun22$sunrise <- base::paste(sun22$hr, sun22$min, sun22$sec, sep=":")
+
+# format column so that R recognizes it as time
+sun22$sunrise <- hms::as_hms(sun22$sunrise)
+
+#check structure
+str(sun22)
+
+# keep only date and sunrise times in the df:
+colnames(sun22)
+sun22 <- sun22[c(1, 2)]
+
+# write final sunrise times as a .csv
+write.csv(sun22, here("output/nome_sun22_final.csv"))
+
+
+```
+
+
+### ADD JULIAN DATE COLUMN
+
+* Format 'Date' column as a Date
+* Found out that need to change the date from full -2019 to -19 for the year to not convert to 2020 when change to a Date format
+
+```{r juldate}
+## 2019 Environmental
+
+env22$date <- base::as.Date(env22$date)
+#check
+str(env22)
+
+# create Julian date column and convert dates:
+env22$julian <- base::as.POSIXlt(env22$date, 
+                                      format ='%d%b%y')$yday +1
+#check
+head(env22)
+
+```
+
+### FORMAT SURVEY TIME 
+Need to format survey time to be in format of 00:00:00 (h:m:s) in order to calculate how many minutes after sunrise a survey began
+
+
+```{r}
+# remove ':' that's already in there
+env22$start_time <- str_replace(env22$start_time, '[:]', '')
+
+# through trial and error need to change str to integer
+env22$start_time <- as.integer(env22$start_time)
+
+# add 00 to end
+env22$start_time <- base::paste0(env22$start_time, "00") 
+
+# add leading 0
+env22$start_time <- sprintf("%06d", as.numeric(env22$start_time))
+
+# separate sunrise times into columns for h:m:s
+env22 <- tidyr::extract(env22, 
+                             start_time, 
+                             into = c("hr", "min", "sec"), 
+                             "(.{2})(.{2})(.{2})", 
+                             remove = FALSE)
+
+# paste h:m:s column together into another column and separate with ':'
+env22$start_time <- base::paste(env22$hr, 
+                                     env22$min, 
+                                     env22$sec, 
+                                     sep = ":")
+
+# format column so that R recognizes it as time
+env22$start_time <- hms::as_hms(env22$start_time)
+
+#check structure
+str(env22$start_time)
+```
+
+### Format sunrise data
+
+Need to change structure of time and date columns in the sunrise data frame to be 'Date' and 'hms'
+
+```{r strtime}
+
+sunrise22 <- read.csv(here("output/nome_sun22_final.csv"))
+# only keep necessary columns
+sunrise22 <- sunrise22[c(2:3)]
+
+# change date to 'Date' format
+sunrise22$date <- base::as.Date(sunrise22$date)
+
+# change our time format to hour:min:sec
+sunrise22$sunrise <- hms::as_hms(sunrise22$sunrise)
+
+```
+
+
+### Merge
+
+```{r mergedfs}
+# check that column formats are similar for date
+str(env22)
+str(sunrise22)
+
+# merge environmental and sunrise data frames
+env.22.merged <- env22 %>%
+  dplyr::inner_join(sunrise22, by = "date")
+
+
+```
+
+
+### CALCULATE MIN AFTER SUNRISE
+
+```{r calcminsun}
+### 2019 
+
+colnames(env.22.merged)
+
+# have to combine date and time so it can correctly calculate the difference in time:
+
+env.22.merged$min_after_sun <- as.numeric(difftime(strptime(paste(env.22.merged[,6], env.22.merged[,15]), "%Y-%m-%d %H:%M:%S"), strptime(paste(env.22.merged[,6], env.22.merged[,32]), "%Y-%m-%d %H:%M:%S"), units = "mins"))
+
+# check
+head(env.22.merged)
+
+colnames(env.22.merged)
+env.22.sub <- env.22.merged[,c(5, 31, 7, 33, 8, 19, 20, 22, 21)]
+
+```
+
+## FILTER FOR DISTANCE
+
+Survey points were 800m apart. In order to make sure we did not double count individuals, I will only keep observations with distances 400m or less.
+
+I will do this buy subsetting rows based on distance
+
+Distance must be 0 > < 401 (in 2019 data lots of -999 which means they were greater than 400m, but less than 1km away)
+OR dist_cat has a value >0 (prey smaller than American Robin placed in distance 'bins' of 0-100 meters, 100-200 meters, and 200+ meters but less than 400m away)
+
+```{r}
+str(obs22)
+
+#check unique values to make sure there are no characters that will be 
+#returned as NAs when changing to integer
+unique(obs22$distance)
+
+# now change structure of distance to numeric
+obs22$distance <- as.numeric(obs22$distance)
+
+# filter to keep only distances that are LESS THAN 401 'OR' where the distance categroy does not equal NA (this is so we still keep the rows where distance is in the distance category column)
+obs22.filter <- dplyr::filter(obs22, distance < 401 | dist_cat != "NA")
+
+# now filter out flyovers that weren't displays
+obs22.filter2 <- dplyr::filter(obs22.filter, flyover != "Y" | display == "Y")
+
+
+```
+
+
+# CHECK FOR MISSING ENTRIES between obs and env dataframes
+This is likely going to be missing observations for points because they have all been filtered out
+```{r misschecks}
+
+### CHECK FOR MISSING IDS BETWEEN OBS and ENV DATAFRAMES ----
+
+missing.id1 <- anti_join(env.22.sub, obs22.filter2)
+missing.id2 <- anti_join(obs22.filter2, env.22.sub)
+
+```
+
+Okay looks like there is environmental data for K4_T22_09 but no observational data - will double check original dataframe to confirm this is because no species were detected or species that were detected were filtered out because of distance.
+
+Okay, it was because 'NO SPECIES DETECTED' for this point. Will need to add that row back in
+
+```{r rbindhere}
+#obs22 row 8
+
+obs22.filter3 <- rbind(obs22.filter2, obs22[8,])
+
+```
+
+
+# Double check species names for correct codes
+
+```{r}
+### GET LENGTH OF UNIQUE SPP VALUES -------------
+
+species <- obs22.filter3$species
+spp.counts <- as.data.frame(table(species))
+```
+
+## SAVE AS NEW CSVs
+
+Now save cleaned tables to be used for species specific analysis
+```{r save}
+### SAVE DATAFRAMES -----------------------------
+
+write.csv(obs22.filter3, here("output/obs_22.csv"))
+write.csv(env.22.sub, here("output/env_22.csv"))
+          
+```
+
+# Now combine all 3 years
+
+```{r threeyears}
+
+# 2022
+obs_22 <- read.csv(here("output/obs_22.csv"))
+env_22 <- read.csv(here("output/env_22.csv"))
+
+# 2019 and 2021 already combined
+obs1 <- read.csv(here("output/all_obs.csv"))
+env1 <- read.csv(here("output/all_env.csv"))
+
+# Remove extra [X] column and keep only columns in obs 2022 that will match with other obs file
+colnames(obs_22)
+colnames(obs1)
+
+colnames(env1)
+colnames(env_22)
+
+# need to change some names for env frames
+
+colnames(env_22)[which(names(env_22) == 'prim_obs')] <- 'observer'
+colnames(env_22)[which(names(env_22) == 'wind_sp')] <- 'wind'
+
+# check
+colnames(env1)
+colnames(env_22)
+#################################################################
+
+obs_22 <- obs_22[,c(6, 8, 9, 10, 12, 13, 14, 18, 16)]
+env_22 <- env_22[,c(2:10)]
+obs1 <- obs1[,c(2:10)]
+env1 <- env1[,c(2:10)]
+
+
+# combine using rbind
+obs.3years <- rbind(obs1, obs_22)
+env.3years <- rbind(env1, env_22)
+
+# double check for missing points
+
+missing.a <- anti_join(obs.3years, env.3years)
+missing.b <- anti_join(env.3years, obs.3years)
+# nice
+
+# check for NA in time intervals and counts
+sum(is.na(obs.3years$count))
+sum(is.na(obs.3years$time_int)) # we got 1 in time int
+
+# ah right it's for the 'no spp detected point' - will change time int to 0
+
+obs.3years[7991, 4] <- '0'
+
+# save
+
+write.csv(obs.3years, here("output/obs_3years.csv"))
+write.csv(env.3years, here("output/env_3years.csv"))
+
+
+
+```
+
+
+
+
+# END SCRIPT
+
+
+
+
+
