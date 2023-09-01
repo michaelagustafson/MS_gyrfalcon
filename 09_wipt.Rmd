@@ -1,0 +1,569 @@
+---
+title: "09_wipt"
+author: "Michaela Gustafson"
+date: "1/6/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## TIME REMOVAL ANALYSIS: WILLOW PTARMIGAN
+
+In this code I will be running my time-removal abundance model for Willow Ptarmigan.
+
+This is a multinomial N-mixture model.
+
+
+## Willow Ptarmigan Habitat
+
+Citation:
+Hannon, S. J., P. K. Eason, and K. Martin (2020). Willow Ptarmigan (Lagopus lagopus), version 1.0. In Birds of the World (S. M. Billerman, Editor). Cornell Lab of Ornithology, Ithaca, NY, USA. https://doi.org/10.2173/bow.wilpta.01
+
+Habitat: During the breeding season, Willow Ptarmigan inhabit subarctic and subalpine habitats where there is abundant shrubby vegetation, usually places below 6,000 feet elevation. At this season, they favor flat, moist areas as opposed to steep, dry slopes. Common plants are willow, birch, spruce, and fir; crowberry and blueberry are also present in some parts of the breeding range. 
+
+Food: Willow Ptarmigan have a simple diet of plant matter, primarily flower buds, catkins, leaves, twigs, berries, and seeds. In summer, they also eat whatever insects are available, both from the ground and low vegetation. Specific plant foods include willow, blueberry, bearberry, horsetail, birch, poplar, avens, Viburnum (arrowwood), and seeds of various grasses and sedges. 
+
+
+
+## LIBRARY
+These are the packages used in the following code:
+```{r library}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(unmarked)
+library(AICcmodavg)
+library(raster)
+library(here)
+library(AHMbook)
+```
+
+
+## LOAD OBSERVATION and ENVIRONMENTAL DATA
+
+```{r loaddata}
+
+all.obs <- read.csv(here("output/obs_3years.csv"))
+all.env2 <- read.csv(here("output/final_env_join_22Aug22.csv"))
+
+# remove extra 'X' column from import
+all.obs <- all.obs[,-c(1)]
+all.env2 <- all.env2[,-c(1)]
+
+for (i in 1:nrow(all.env2)) {
+   all.env2$shrub[i] <- all.env2$openshrub[i] + all.env2$tallshrub[i]
+}
+
+for (i in 1:nrow(all.env2)) {
+   all.env2$allshrub[i] <- all.env2$openshrub[i] + all.env2$tallshrub[i] + all.env2$lowshrub[i]
+}
+
+# create frequency tables
+
+#all.env3 <- all.env2[,c(2:16)]
+
+
+
+```
+## PREP OBSERVATION DATA FOR SELECTED SPECIES
+
+```{r wiptprep}
+# copy data table for WIPT
+
+wipt <- data.frame(all.obs)
+
+# change all species codes of WIPT to a 1 and all other species to 0
+wipt$species[wipt$species == "WIPT"] <- 1
+wipt$species[wipt$species != "1"] <- 0
+
+# change count to 0 for non WIPT
+wipt$count[wipt$species == 0] <- 0
+head(wipt)
+# now 'wipt' df represents counts for Willow Ptarmigan
+
+
+# check for na values
+sum(is.na(wipt$time_int))
+
+
+# change time intervals to reflect intervals of 2 minutes
+wipt2 <- mutate(wipt, 
+                time_int = ifelse(wipt$time_int %in% 0:1, "1", 
+                                  ifelse(wipt$time_int %in% 2:3, "2", 
+                                         ifelse(wipt$time_int %in% 4:5, "3",
+                                                ifelse(wipt$time_int %in% 6:7, "4",
+                                                       ifelse(wipt$time_int %in% 8:9, "5", "NA"))))))
+
+
+# aggregate rows and sum counts for matching keys and time intervals
+# must change formats first:
+
+str(wipt2)
+
+wipt2$id <- as.factor(wipt2$id)
+wipt2$time_int <- as.factor(wipt2$time_int)
+wipt2$count <- as.integer(wipt2$count)
+
+
+sum(wipt2$count) # sample size 518
+
+
+wipt.agg <- aggregate(x = wipt2$count, 
+                      by = list(wipt2$id, wipt2$time_int), 
+                      FUN = sum)
+
+
+
+
+# rename columns in aggregated df
+
+head(wipt.agg)
+
+names(wipt.agg)[names(wipt.agg) == "Group.1"] <- "id"
+names(wipt.agg)[names(wipt.agg) == "Group.2"] <- "time_int"
+names(wipt.agg)[names(wipt.agg) == "x"] <- "count"
+
+head(wipt.agg)
+
+# okay so wipt.agg is our count dataframe, we don't need any of the other columns,
+# those were only used to help filter out for distance and flyover observatiosn
+
+sum(wipt.agg$count) # sample size: 528
+
+# check that ids are matching between env and obs
+# need to change id to a factor to use anti-join
+all.env2$id <- as.factor(all.env2$id)
+miss1 <- anti_join(all.env2, wipt.agg) # clear
+miss2 <- anti_join(wipt.agg, all.env2) # clear
+
+
+
+# spread dataframes:
+
+unique(wipt.agg$id) # should end up with 916 rows
+
+
+wipt.wide <- wipt.agg %>%
+  dplyr::select(id, time_int, count) %>%
+  spread(key = time_int, value = count, fill = 0)
+
+#write.csv(wipt.wide, here("output/wiptwide.csv"))
+wipt.wide <- read.csv(here("output/wiptwide.csv"))
+wipt.wide <- wipt.wide[,-c(1)]
+```
+
+```{r testvars}
+test.df <- left_join(wipt.wide, all.env2)
+test.df$total <- rowSums(test.df[,c("1", "2", "3", "4", "5")])
+
+a1 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total)), x = test.df$sparseveg))
+a1 # for ROPT the upper ones might be outliers...above 0.7-75ish?
+
+a2 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total)), x = test.df$tundra))
+a2 #
+
+a4 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total)), x = test.df$allshrub))
+a4 
+
+a5 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total)), x = test.df$lowshrub))
+a5 # possible outliers here for low shrub
+
+a6 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total)), x = test.df$shrub))
+a6 # shrub 
+
+a7 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total)), x = test.df$tussock))
+a7
+
+
+
+```
+
+## TIME-REMOVAL MODEL
+WIPT sample size: 516 individuals counted
+```{r trframe}
+all.env.scaled2 <- read.csv(here("output/all.env.scaled_22Aug22.csv"))
+all.env.scaled2 <- all.env.scaled2[,-c(1)]
+
+wipt.env.join <- left_join(wipt.wide, all.env.scaled2)
+head(wipt.env.join); dim(wipt.env.join)
+str(wipt.env.join)
+wipt.env.join$year <- as.factor(wipt.env.join$year)
+
+
+# create observation and site covariate data frames
+colnames(wipt.env.join)
+
+timeints <- wipt.env.join[,c(2:6)]
+siCovs <- wipt.env.join[,c(7:32)]
+area <- pi*400^2
+
+wiptFrame2 <- unmarkedFrameMPois(
+  # import time removal columns(counts):
+  y = timeints, 
+  siteCovs = data.frame(siCovs, area), 
+  # define pifun type: 
+  type = "removal" )
+# fit models: multinomPois order of formulas: detection, abundance
+
+```
+
+```{r trmodel}
+# can't use all land cover variables because htey add up to 1 within each site
+
+fm0 <- multinomPois(~ 1 ~ 1, data = wiptFrame2) #null model
+
+fm.2 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + tussock + allshrub + elev + offset(log(area)), data = wiptFrame2)
+
+#fm.6 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + shrub + elev + offset(log(area)), data = wiptFrame2)
+
+#fm.7 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + allshrub + elev + offset(log(area)), data = wiptFrame2)
+
+ms2 <- fitList(
+  "lam(.)p(.)" = fm0,
+  "lam(tundra+tussock+allshrub+elev+offset(log(area)))p(julian+min_after_sun+wind+observer)" = fm.2)
+
+
+(ms2sel <- modSel(ms2))
+ms2sel
+
+
+summary(fm0)
+summary(fm.2)
+#summary(fm.6)
+#summary(fm.7)
+
+
+wp.coef <- as.data.frame(coef(fm.2))
+wp.state.confint <- as.data.frame(confint(fm.2, level = 0.95, type = "state"))
+wp.det.confint <- as.data.frame(confint(fm.2, level = 0.95, type = "det"))
+write.csv(wp.coef, here("output/wpcoef.csv"))
+write.csv(wp.state.confint, here("output/wpci_state.csv"))
+write.csv(wp.det.confint, here("output/wpci_det.csv"))
+
+```
+
+
+
+## CHECK MODEL FIT
+Will be looking at c-hat for overdispersion, as well as chisq value and its p-value
+```{r gof}
+
+set.seed(1234)
+
+(gof.fm2 <- parboot(object = fm.2, statistic = fitstats2, nsim = 1000, report = 1))
+gof.fm2
+
+
+
+# compute c-hat
+chat.2 <- gof.fm2@t0[2]/mean(gof.fm2@t.star[,2])
+chat.2
+#1.004
+
+saveRDS(fm.2, "E:/gyrf_analysis/gyrf3/models/wiptfm2_27Aug22.rds")
+fm.2 <- readRDS(here("models/wiptfm2_27Aug22.rds"))
+
+
+```
+
+## PREDICT
+Used tundra, tussock, low and tall shrub, and elevation in WIPT model (and include detection variables back in later???)
+```{r predict}
+
+# First need to scale study-wide rasters to match scaling of model:
+
+
+
+elev <- raster("E:/gyrf_analysis/gyrf3/output/dem_400.tif")
+lowshrub <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/lowshrub.tif")
+openshrub <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/openshrub.tif")
+tallshrub <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/tallshrub.tif")
+tundra <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/tundra.tif")
+tussock <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/tussock.tif")
+
+allshrub = sum(tallshrub,openshrub,lowshrub,na.rm=TRUE)
+#plot(allshrub)
+#plot(tallshrub)
+
+
+
+area.raster <- elev 
+values(area.raster) <- 400*400 # area of a grid pixel
+
+# find center/mean and std dev of scaled covariates to scale prediction surfaces above
+### NEED TO FIND CENTER AND STD DEV FOR SCALED allshrub###
+
+elev.s <- (elev-180)/103
+tundra.s <- (tundra-0.573)/0.305
+tussock.s <- (tussock-0.0632)/0.104
+allshrub.s <- (allshrub-0.233)/0.248
+
+# add detection covariates (standardized mean values)
+
+jul.raster <- elev 
+values(jul.raster) <- mean(all.env.scaled2$julian)
+
+wind.raster <- elev 
+values(wind.raster) <- mean(all.env.scaled2$wind)
+
+minsun.raster <- elev 
+values(minsun.raster) <- mean(all.env.scaled2$min_after_sun)
+
+obs.raster <- elev 
+values(obs.raster) <- as.factor("DS")
+
+
+
+pred.surface <- stack(tundra.s, tussock.s, allshrub.s, elev.s, area.raster, jul.raster, wind.raster, minsun.raster, obs.raster)
+
+names(pred.surface) <- c("tundra", "tussock", "allshrub", "elev", "area", "julian", "wind", "min_after_sun", "observer")
+
+
+
+wipt.prediction <- predict(fm.2, type="state", newdata=pred.surface)
+
+ncell(wipt.prediction)
+
+wipt.freq <- freq(wipt.prediction, digits = 2)
+
+wipt.freq1 <- as.data.frame(wipt.freq[1])
+
+write.csv(wipt.freq1, here("output/wiptcellcounts.csv"))
+
+writeRaster(wipt.prediction, filename = names(wipt.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
+```
+
+
+
+# PREDICTION MAP
+
+```{r wiptpredmap}
+
+save.image(plot(wipt.prediction, axes=FALSE, col=terrain.colors(100)))
+plot(wipt.prediction, axes=FALSE, col=terrain.colors(100))
+
+sum_raster_cells <-cellStats(wipt.prediction, 'sum')
+sum_raster_cells
+
+```
+
+```{r ppplots}
+# Elevation X Willow Ptarm
+# All shrub X Willow Ptarm
+# Tundra X Willow Ptarm
+# Tussock X Willow Ptarm
+
+
+# Estimate partial prediction plots for predictors with 95% CIs not overlapping zero:
+# Start by creating our datasets to predict over
+
+# how many values do we use:
+n <- 100
+
+# Use the observed values to define our range:
+elevation.pp <- seq( min( all.env2[,"elev"]),max(500),
+                   length.out = n )
+
+allshrub.pp <- seq( min( all.env2[,"allshrub"]),max( all.env2[,"allshrub"]),
+                   length.out = n )
+
+tundra.pp <- seq( min( all.env2[,"tundra"]),max( all.env2[,"tundra"]),
+                   length.out = n )
+
+tussock.pp <- seq( min( all.env2[,"tussock"]),max( all.env2[,"tussock"]),
+                   length.out = n )
+
+#standardize predictors:
+elev.std <- scale( elevation.pp )
+allshrub.std <- scale( allshrub.pp )
+tundra.std <- scale( tundra.pp )
+tussock.std <- scale( tussock.pp )
+area.x = 400*400
+
+
+### ELEVATION
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+abundData <- data.frame( tundra = 0, tussock = 0, allshrub = 0, elev = elev.std, area = area.x )
+
+#predict partial relationship:
+pred.elev <- predict( fm.2, type = "state", newdata = abundData, 
+                          appendData = TRUE )
+#view
+head( pred.elev ); dim( pred.elev )
+
+
+### plot
+
+w.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_bw( base_size = 50 ) +
+  # add labels
+  #ylim(0, 1.5) +
+  labs( x = "Elevation (m)", y = "Willow Ptarmigan \n relative abundance" ) +
+  # add band of confidence intervals
+  #theme(axis.title.y=element_blank()) +
+  theme(text=element_text(size=60)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 1.5, alpha = 0.5, color = "grey" ) +
+  # add mean line on top
+  geom_line( size = 2 )
+#view
+w.elevp
+ggsave("WillowXElev3.png", width = 7, height = 7, dpi = 300)
+
+```
+
+```{r tussockpp}
+### TUSSOCK
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+abundData <- data.frame( tundra = 0, tussock = tussock.std, allshrub = 0, elev = 0, area = area.x )
+
+#predict partial relationship:
+pred.tuss <- predict( fm.2, type = "state", newdata = abundData, 
+                          appendData = TRUE )
+#view
+head( pred.tuss ); dim( pred.tuss )
+
+
+### plot
+
+w.tussp <- cbind( pred.tuss[,c("Predicted", "lower", "upper") ], tussock.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tussock.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_bw( base_size = 50 ) +
+  # add labels
+  #ylim(0, 1.5) +
+  labs( x = "Tussock (%)", y = "Willow Ptarmigan \n relative abundance" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=60)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 1.5, alpha = 0.5, color = "grey" ) +
+  # add mean line on top
+  geom_line( size = 2 )
+#view
+w.tussp
+ggsave("WillowXTuss2.png", width = 7, height = 7, dpi = 300)
+
+```
+
+```{r tunpppp}
+### TUNDRA
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+abundData <- data.frame( tundra = tundra.std, tussock = 0, allshrub = 0, elev = 0, area = area.x )
+
+#predict partial relationship:
+pred.tun <- predict( fm.2, type = "state", newdata = abundData, 
+                          appendData = TRUE )
+#view
+head( pred.tun ); dim( pred.tun )
+
+
+### plot
+
+w.tundp <- cbind( pred.tun[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 13) +
+  theme_bw( base_size = 50 ) +
+  # add labels
+  labs( x = "Tundra (%)", y = "Willow Ptarmigan \n relative abundance" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=60)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 1.5, alpha = 0.5, color = "grey" ) +
+  # add mean line on top
+  geom_line( size = 2 )
+#view
+w.tundp
+ggsave("WillowXTund2.png", width = 7, height = 7, dpi = 300)
+
+```
+
+```{r allppp}
+### ALL SHRUB
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+abundData <- data.frame( tundra = 0, tussock = 0, allshrub = allshrub.std, elev = 0, area = area.x )
+
+#predict partial relationship:
+pred.alls <- predict( fm.2, type = "state", newdata = abundData, 
+                          appendData = TRUE )
+#view
+head( pred.alls ); dim( pred.alls )
+
+
+### plot
+
+w.allsp <- cbind( pred.alls[,c("Predicted", "lower", "upper") ], allshrub.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = allshrub.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 13) +
+  theme_bw( base_size = 50 ) +
+  # add labels
+  labs( x = "All shrub (%)", y = "Willow Ptarmigan \n relative abundance" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=60)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 1.5, alpha = 0.5, color = "grey" ) +
+  # add mean line on top
+  geom_line( size = 2 )
+#view
+w.allsp
+ggsave("WillowXAllshrub2.png", width = 7, height = 7, dpi = 300)
+
+
+save.image(here("09_wipt_workspace2.RData"))
+
+```
+
+
+```{r}
+figure <- ggarrange(tundp, allsp,
+                    ncol = 3, nrow = 1)
+
+
+figure
+ggsave("wipttundshrub.png", width = 30, height = 8, dpi = 300, limitsize = FALSE)
+
+
+fig2 <- ggarrange(tussp, elevp,
+                    ncol = 3, nrow = 1)
+fig2
+ggsave("wipttusselev.png", width = 30, height = 8, dpi = 300, limitsize = FALSE)
+
+
+fig3 <- ggarrange(tundp, allsp, tussp, elevp,
+                  ncol = 2, nrow = 2)
+fig3
+
+
+
+ggsave("wiptall.png", width = 17, height = 17, dpi = 300, limitsize = FALSE)
+
+
+```
+
+
+
+
+
+
+

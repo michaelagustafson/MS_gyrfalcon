@@ -1,0 +1,118 @@
+---
+title: "05_createstudyarea"
+author: "Michaela Gustafson"
+date: "2022-08-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Create Gyrfalcon Study Area
+
+### Library
+```{r lib}
+library(terra)
+library(sf)
+library(sp)
+library(rgdal)
+library(ggplot2)
+library(tidyverse)
+library(raster)
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(rgeos)
+library(here)
+```
+
+
+### Import point count shapefile and occupancy data (what I've got for now) to create shapefile for GYRF territories
+
+
+```{r import}
+pts <- readOGR(here("shapefiles"), "pts_3years")
+
+bente <- read.csv(here("data/BenteGyrfalonTerritorySurveys.csv"))
+
+ak_dem <- raster::raster(here("data/dsm_mosaic_AK.tif"))
+```
+
+
+Subset Bente data to be Site (which is the territory level) and coordinates:
+
+```{r subbente}
+colnames(bente)
+bente.sites <- bente[,c(2, 4:5, 26)]# site:lat:lon:year
+```
+
+# For sites with repeating years, only need to keep one occurrence:
+
+```{r duplicates}
+unique(bente.sites$site)
+# should end up with 271 rows because 271 unique GYRF territories
+
+bente.sub <- bente.sites %>% distinct(site, .keep_all = TRUE)
+
+```
+
+
+# Now turn coordinates into shapefile and put in same CRS as elevation raster
+
+```{r shpfle}
+xy4 <- bente.sub[c(3,2)]
+colnames(xy4)[1] <- "x"; colnames(xy4)[2] <- "y"
+coordinates(xy4) <- ~ x + y
+spdf2 <- SpatialPointsDataFrame(coords = xy4, data = bente.sub)
+proj4string(spdf2) <- CRS("+init=epsg:4326")
+
+bente.proj <- spTransform(spdf2, crs(ak_dem))
+#plot(ak_dem); points(bente.proj)
+writeOGR(bente.proj, dsn=here("shapefiles"), layer="bente_proj_2" , driver="ESRI Shapefile")
+
+```
+
+### Buffer points
+
+Okay, I need to buffer territories with a 15km buffer +500m (15500 m) 
+
+And buffer survey points by 500m *** HAD TO CHANGE TO 4000m buffer so that no gaps in study area polygon
+
+Then dissolve polygon buffers together
+
+```{r buffer}
+
+# GYRF Territories:
+
+# check what units of measurement we are in so we know what to put for width:
+st_crs(bente.proj, parameters = TRUE)$units_gdal
+
+# create buffer
+bente.buff <- gBuffer(bente.proj, byid = TRUE, width = 15500)
+plot(bente.buff)
+
+
+# Prey Survey Points
+# check what units of measurement we are in so we know what to put for width:
+st_crs(pts, parameters = TRUE)$units_gdal
+
+# create buffer
+pts.buff <- gBuffer(pts, byid = TRUE, width = 4000)
+plot(pts.buff)
+
+# Merge buffers
+study.area <- raster::bind(bente.buff, pts.buff)
+plot(study.area)
+
+
+# Dissolve merged shapefiles
+
+study.diss <- aggregate(study.area)
+plot(study.diss)
+proj4string(study.diss)
+
+shapefile(x = study.diss, file = "shapefiles/gyrf_studyarea.shp")
+
+```
+

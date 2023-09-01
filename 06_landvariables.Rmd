@@ -1,0 +1,312 @@
+---
+title: "05_landvariables"
+author: "Michaela Gustafson"
+date: "2022-08-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+In this script I will be extracting land cover variables, mean elevation, and range of elevation ('steepness') for each point count survey point.
+
+I will be adding land cover raster data from: https://daac.ornl.gov/ABOVE/guides/Annual_Landcover_ABoVE.html
+
+I will be importing GPS points for 2019 and 2021 and 2022* prey surveys
+
+
+## LIBRARY
+
+```{r library}
+library(terra)
+library(sf)
+library(sp)
+library(rgdal)
+library(ggplot2)
+library(tidyverse)
+library(raster)
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(rgeos)
+library(here)
+library(reshape2)
+```
+
+
+
+## IMPORT DEM
+Import elevation raster 
+```{r dem}
+ak_dem <- raster::raster(here("data/dsm_mosaic_AK.tif"))
+```
+
+
+## UPLOAD LAND COVER RASTERS
+Uploading the raster that Jenny ran for me that has the land cover tiles mosaiced and in the same CRS as the DEM
+
+```{r landcover}
+
+### JENNY'S CODE:
+#all.mos <- raster("E:/Dropbox/Back&Forth/GRYF/michaela/ABoVE_2014lyrs/all.mos.tif")
+#plot(all.mos)
+
+#all.mos.dem <- projectRaster(all.mos, method="ngb", crs = "+proj=aea +lat_0=50 +lon_0=-154 +lat_1=55 +lat_2=65 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
+#writeRaster(all.mos.dem, "E:/Dropbox/Back&Forth/GRYF/michaela/ABoVE_2014lyrs/all.mos.dem.tif", overwrite=TRUE)
+
+
+all.mos <- raster(here("jenny/all.mos.dem.tif"))
+
+```
+
+## IMPORT SURVEY LOCATIONS
+Already compiled these and put in the correct CRS in previous code
+
+```{r pionts}
+# these points were previously put in same CRS as dem
+pts <- as.data.frame(readOGR(here("shapefiles"), "pts_3years_2"))
+
+```
+
+
+## Study Area NEED TO UPDATE AFTER GETTING OCCUPANCY DATA
+
+```{r studyarea}
+study.area <- readOGR(here("shapefiles"), "gyrf_studyarea")
+crs(study.area)
+study.area.dem <- spTransform(study.area, crs(ak_dem))
+```
+
+
+
+Step 1: 
+a. Crop and mask elevation raster with study area.
+b. Aggregate elevation raster from 5m res to 400m res
+c. Remove pixels that result in a mean elevation >500m
+
+```{r akdem}
+# Step A: Crop and mask elevation raster with study area
+ak_dem.crop <- raster::crop(ak_dem, study.area.dem)
+ak_dem.crop.mask <- raster::mask(ak_dem.crop, study.area.dem)
+
+# Step B: Aggregate elevation raster from 5m res to 400m res
+dem.400 <- aggregate(ak_dem.crop.mask, fact = 80, fun = mean, na.rm = TRUE) # have to include na.rm = true or else elevations >500m come back into the picture!
+
+# Step C: remove pixels that result in mean elevation >500m
+dem.400[dem.400>=500] <- NA
+
+
+# save for easier code running later
+writeRaster(dem.400, here("output/dem_400.tif"), overwrite = TRUE)
+
+# Here I saved and closed the script and project and restarted then just loaded the dem_400.tif to clear out some memory
+
+dem.400 <- raster(here("output/dem_400.tif"))
+```
+
+
+## Crop land cover to study area then resample to final elevation raster
+
+```{r}
+
+mos.crop <- raster::crop(all.mos, study.area.dem)
+mos.mask <- raster::mask(mos.crop, study.area.dem)
+
+
+## Run code to aggregate to 400 and get percentages of land cover types and creating prediction surface
+
+
+r <- raster(extent(dem.400), res = 400, crs = "+proj=aea +lat_0=50 +lon_0=-154 +lat_1=55 +lat_2=65 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs ")
+
+############# prediction surface land cover ###############
+neighborhood_radius <- 400 / 2
+
+# get cell centers and create neighborhoods
+r_centers <- rasterToPoints(r, spatial = TRUE) %>% 
+  st_as_sf() %>% 
+  transmute(id = row_number())
+r_cells <- st_buffer(r_centers, dist = neighborhood_radius)
+
+# extract land cover values within neighborhoods
+lc_extract_pred <- mos.mask %>% 
+  exactextractr::exact_extract(r_cells, progress = TRUE) %>% 
+  map(~ count(., mos.mask = value)) %>% 
+  tibble(id = r_cells$id, data = .) %>% 
+  unnest(data)
+
+# calculate the percent for each land cover class
+pland_pred <- lc_extract_pred %>% 
+  count(id, mos.mask) %>% 
+  group_by(id) %>% 
+  mutate(pland = n / sum(n)) %>% 
+  ungroup() %>% 
+  dplyr::select(-n) %>% 
+  # remove NAs after tallying so pland is relative to total number of cells
+  filter(!is.na(mos.mask))
+
+lc_names <- tibble(mos.mask = 1:15,
+                   lc_name = c("egforest", "decforest", "mixforest", "woodland", "lowshrub", "tallshrub", "openshrub", "tundra", "tussock", "sparseveg", "fen", "bog", "littoral", "barren", "water"))
+
+# convert names to be more descriptive
+pland_pred <- pland_pred %>% 
+  inner_join(lc_names, by = "mos.mask") %>% 
+  arrange(mos.mask) %>% 
+  dplyr::select(-mos.mask)
+
+
+# tranform to wide format, filling in implicit missing values with 0s
+pland_pred <- pland_pred %>% 
+  pivot_wider(names_from = lc_name, 
+              values_from = pland, 
+              values_fill = list(pland = 0)) %>% 
+  dplyr::select(id, everything())
+
+# join in coordinates
+pland_coords <- st_transform(r_centers, crs = "+proj=aea +lat_0=50 +lon_0=-154 +lat_1=55 +lat_2=65 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs") %>% 
+  st_coordinates() %>% 
+  as.data.frame() %>% 
+  cbind(id = r_centers$id, .) %>% 
+  rename(longitude = X, latitude = Y) %>% 
+  inner_join(pland_pred, by = "id")
+
+lc_list <- list()
+
+for(i in 1:length(lc_names)){
+lc_list <- pland_coords %>% 
+  # convert to spatial features
+  st_as_sf(coords = c("longitude", "latitude"), crs = "+proj=aea +lat_0=50 +lon_0=-154 +lat_1=55 +lat_2=65 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs") %>% 
+  st_transform(crs = projection(r)) %>% 
+  # rasterize points
+   rasterize(r, field = lc_names[[i]]) %>% 
+  # trim off empty edges of raster
+  trim()
+}
+
+lc_stack2 <- stack(lc_list)
+
+#mask with dem.400
+lc_stack2 <- resample(lc_stack2, dem.400, method = 'ngb') #NOT SURE WHY I DIDN'T DO THIS HERE? Earlier it was hashed out..
+lc_stack2 <- mask(lc_stack2, dem.400)
+
+writeRaster(lc_stack2, filename=names(lc_stack2), bylayer=TRUE, format="GTiff", overwrite = TRUE)
+
+############################################################################
+######## extract to the survey points from original res rasters ############
+############################################################################
+################## START HERE AUG 9th ###########################
+
+############################################################################
+######## extract to the survey points from original res rasters ############
+############################################################################
+colnames(pts)[3] <- "longitude"; colnames(pts)[4] <- "latitude"
+neighborhood_radius <- 400 / 2
+
+pts_buff <- pts[c(1,3,4)] %>% 
+  # convert to spatial features
+  st_as_sf(coords = c("longitude", "latitude"), crs = "+proj=aea +lat_0=50 +lon_0=-154 +lat_1=55 +lat_2=65 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs ") %>% 
+  # buffer to create neighborhood around each point
+  st_buffer(dist = neighborhood_radius) 
+
+
+# iterate over all years extracting land cover for all pts buffer in each
+
+
+
+plot(mos.mask)
+
+lc_extract <- mos.mask %>% 
+  exactextractr::exact_extract(pts_buff, progress = TRUE) %>% 
+  map(~ dplyr::count(., lc = value)) %>%
+  tibble(id = pts_buff$id, data = .) %>%
+  unnest(data)
+
+pland <- lc_extract %>% 
+  # calculate proportion
+  dplyr::group_by(id) %>% 
+  dplyr::mutate(pland = n / sum(n)) %>% 
+  ungroup() %>% 
+  dplyr::select(-n) %>% 
+  # remove NAs after tallying so pland is relative to total number of cells
+  dplyr::filter(!is.na(lc))
+
+lc_names <- tibble(lc = 1:15,
+                   lc_name = c("egforest", "decforest", "mixforest", "woodland", "lowshrub", "tallshrub", "openshrub", "tundra", "tussock", "sparseveg", "fen", "bog", "littoral", "barren", "water"))
+
+pland <- pland %>% 
+  inner_join(lc_names, by = "lc") %>% 
+  arrange(lc) %>% 
+  dplyr::select(-lc)
+
+# transform to wide format, filling in implicit missing values with 0s%>% 
+
+colnames(pland)[2] <- "value"
+pland$lc_name <- as.factor(pland$lc_name) #need to be a factor not character
+
+pland2 <- reshape2::dcast(pland, id~lc_name, sum) # needs a function, shouldn't matter if its mean or sum b/c  there is only one per id/ lc type
+pland2[is.na(pland2)] <- 0 # fill in NAs with 0
+
+#
+########################################################################
+#pland <- pland %>%
+ # pivot_wider(names_from = lc_name, 
+              #values_from = pland, 
+              #values_fill = list(pland = 0))
+              
+
+
+
+#pland3 <- pland[,-c(2)]
+#pland2 <- aggregate(x = pland3, by = list(id), FUN = "sum")
+######## extract dem: using extract() here - it takes longer for sure! #####
+
+#ak_dem <- raster("E:/Dropbox/Back&Forth/GRYF/michaela/ak_dem.tif") # already loaded earlier
+###################################################################################################
+mean.elev <- as.data.frame(extract(ak_dem, pts_buff, fun=mean, na.rm=TRUE))
+colnames(mean.elev)[1] <- "elev"
+
+steep.elev <- as.data.frame(extract(ak_dem, pts_buff, fun=range, na.rm=TRUE))
+steep.elev$steep <- (steep.elev$V2) - (steep.elev$V1)
+
+### put the covs together and export #####
+data <- cbind(pland2, mean.elev)
+data2 <- cbind(data, steep.elev[,3])
+colnames(data2)[17] <- "steep"
+
+
+write.csv(data2, here("output/data_pts_17Aug.csv"), row.names = FALSE)
+```
+
+
+
+### END SCRIPT
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

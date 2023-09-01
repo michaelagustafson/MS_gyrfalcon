@@ -1,0 +1,581 @@
+---
+title: "10_ropt"
+author: "Michaela Gustafson"
+date: "1/6/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Paper: Modelling habitat suitability for alpine rock ptarmigan (Lagopus muta helvetica)
+combining object-based classification of IKONOS imagery and Habitat Suitability
+Index modelling
+Margit Zohmanna, Josef Pennerstorfer, Ursula Nopp-Mayr
+
+Rock Ptarmigan prefer more alpine habitats - rock/scree, rock with sparse vegetation, dwarf shrubs, and home ranges tend to be large because suitable habitat is patchy (this is from another paper: Spacing behaviour and habitat use of rock ptarmigan
+(Lagopus mutus) at low density in the Italian Alps
+Massimo Favaron, Giovanni C. Scherini,
+Damiano Preatoni, Guido Tosi, Luc A. Wauters)
+
+So maybe for ropt a little different: low shrub, sparseveg, barren
+
+## TIME REMOVAL ANALYSIS: ROCK PTARMIGAN
+
+In this code I will be running my time-removal abundance model for Rock Ptarmigan.
+
+This is a multinomial N-mixture model.
+
+## LIBRARY
+These are the packages used in the following code:
+```{r library}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(unmarked)
+library(AICcmodavg)
+library(raster)
+library(here)
+library(AHMbook)
+library(brms)
+```
+
+
+## LOAD OBSERVATION and ENVIRONMENTAL DATA
+
+```{r loaddata}
+all.obs <- read.csv(here("output/obs_3years.csv"))
+all.env2 <- read.csv(here("output/final_env_join_22Aug22.csv"))
+
+# remove extra 'X' column from import
+all.obs <- all.obs[,-c(1)]
+all.env2 <- all.env2[,-c(1)]
+
+for (i in 1:nrow(all.env2)) {
+   all.env2$shrub[i] <- all.env2$openshrub[i] + all.env2$tallshrub[i]
+}
+
+for (i in 1:nrow(all.env2)) {
+   all.env2$allshrub[i] <- all.env2$openshrub[i] + all.env2$tallshrub[i] + all.env2$lowshrub[i]
+}
+
+```
+## PREP OBSERVATION DATA FOR SELECTED SPECIES
+
+```{r roptprep}
+# copy data table for WIPT
+
+ropt <- data.frame(all.obs)
+
+# change all species codes of WIPT to a 1 and all other species to 0
+ropt$species[ropt$species == "ROPT"] <- 1
+ropt$species[ropt$species != "1"] <- 0
+
+# change count to 0 for non ROPT
+ropt$count[ropt$species == 0] <- 0
+head(ropt)
+# now 'ropt' df represents counts for Rock Ptarmigan
+
+
+# check for na values
+sum(is.na(ropt$time_int))
+
+
+# change time intervals to reflect intervals of 2 minutes
+ropt2 <- mutate(ropt, 
+                time_int = ifelse(ropt$time_int %in% 0:1, "1", 
+                                  ifelse(ropt$time_int %in% 2:3, "2", 
+                                         ifelse(ropt$time_int %in% 4:5, "3",
+                                                ifelse(ropt$time_int %in% 6:7, "4",
+                                                       ifelse(ropt$time_int %in% 8:9, "5", "NA"))))))
+
+
+# aggregate rows and sum counts for matching keys and time intervals
+# must change formats first:
+
+str(ropt2)
+
+ropt2$id <- as.factor(ropt2$id)
+ropt2$time_int <- as.factor(ropt2$time_int)
+ropt2$count <- as.integer(ropt2$count)
+
+
+sum(ropt2$count) # sample size 73
+
+ropt.agg <- aggregate(x = ropt2$count, 
+                      by = list(ropt2$id, ropt2$time_int), 
+                      FUN = sum)
+
+
+
+
+# rename columns in aggregated df
+
+head(ropt.agg)
+
+names(ropt.agg)[names(ropt.agg) == "Group.1"] <- "id"
+names(ropt.agg)[names(ropt.agg) == "Group.2"] <- "time_int"
+names(ropt.agg)[names(ropt.agg) == "x"] <- "count"
+
+head(ropt.agg)
+
+# okay so ropt.agg is our count dataframe, we don't need any of the other columns,
+# those were only used to help filter out for distance and flyover observatiosn
+
+# check that ids are matching between env and obs
+# need to change id to a factor to use anti-join
+all.env2$id <- as.factor(all.env2$id)
+miss1 <- anti_join(all.env2, ropt.agg) # clear
+miss2 <- anti_join(ropt.agg, all.env2) # clear
+
+# nothing there so that's good
+
+# spread dataframes:
+
+unique(ropt.agg$id) # should end up with 988 rows
+
+
+ropt.wide <- ropt.agg %>%
+  dplyr::select(id, time_int, count) %>%
+  spread(key = time_int, value = count, fill = 0)
+
+write.csv(ropt.wide, here("output/ropt_wide_22aug22.csv"))
+ropt.wide <- read.csv(here("output/ropt_wide_22aug22.csv"))
+ropt.wide <- ropt.wide[,-c(1)]
+
+```
+
+
+# Test for variable outliers
+
+```{r corrtest}
+
+test.df <- left_join(ropt.wide, all.env2)
+test.df$total <- rowSums(test.df[,c("1", "2", "3", "4", "5")])
+
+a1 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total)), x = test.df$sparseveg))
+a1 # for ROPT the upper ones might be outliers...above 0.7-75ish?
+
+a2 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total)), x = test.df$tundra))
+a2 #
+
+a4 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total)), x = test.df$barren))
+a4 # possible outliers here as well around 0.35
+
+a5 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total)), x = test.df$lowshrub))
+a5 # outliers here for low shrub
+
+
+
+
+#okay might have to use all shrub since low shrub has some outliers? or could just use shrub: tall and open together...
+
+
+
+
+# sparseveg is out
+# tundra is okay
+
+
+# So ROPT model might be:
+# tundra
+# shrub
+# elev
+
+
+```
+
+
+
+
+
+
+
+
+
+## SCALE AND CHECK CORRELATIONS
+
+```{r scaledf}
+
+all.env.scaled2 <- read.csv(here("output/all.env.scaled_22Aug22.csv"))
+all.env.scaled2 <- all.env.scaled2[,-c(1)]
+```
+
+## TIME-REMOVAL MODEL
+WIPT sample size: 62 individuals counted
+```{r trmodel}
+
+# check structures and join data frames
+colnames(all.env.scaled2)
+str(all.env.scaled2)
+str(ropt.wide)
+
+ropt.env.join <- left_join(ropt.wide, all.env.scaled2)
+head(ropt.env.join); dim(ropt.env.join)
+str(ropt.env.join)
+ropt.env.join$year <- as.factor(ropt.env.join$year)
+
+# create observation and site covariate data frames
+colnames(ropt.env.join)
+
+timeints <- ropt.env.join[,c(2:6)]
+siCovs <- ropt.env.join[,c(7:32)]
+area <- pi*400^2
+
+
+roptFrame2 <- unmarkedFrameMPois(
+  # import time removal columns(counts):
+  y = timeints, 
+  siteCovs = data.frame(siCovs, area),
+  # define pifun type: 
+  type = "removal" )
+
+# fit models: multinomPois order of formulas: detection, abundance
+# I will only be running a null model and a full model. Not gonna mess around with that multiple model bullshit
+# can't use all land cover variables because htey add up to 1 within each site
+
+### ADD WIND BACK IN??? AND DEM FOR TEST
+
+fm0 <- multinomPois(~ 1 ~ 1, data = roptFrame2) #null model
+fm.1 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + shrub + elev + offset(log(area)), data = roptFrame2)
+fm.10 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + lowshrub + sparseveg  + elev + offset(log(area)), data = roptFrame2)
+fm.11 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + lowshrub + sparseveg + barren + elev + offset(log(area)), data = roptFrame2)
+
+
+ms2 <- fitList(
+  "lam(.)p(.)" = fm0,
+  "lam(tundra+shrub+elev+offset(log(area)))p(julian+min_after_sun+wind+observer)" = fm.1,
+  "lam(tundra+lowshrub+sparseveg+elev+offset(log(area)))p(julian+min_after_sun+wind+observer)" = fm.10,
+  "lam(lowshrub+sparseveg+barren+elev+offset(log(area)))p(julian+min_after_sun+wind+observer)" = fm.11)
+
+(ms2sel <- modSel(ms2))
+ms2sel
+
+
+summary(fm0)
+summary(fm.1)
+
+summary(fm.10)
+summary(fm.11)
+# does the model fit okay: compare model with intercept only [anova] look at AIC
+# when drop out cats, compare AIC (if makes big difference might have to put back in?)
+
+# residual plots
+
+### nonsignificant cat variables
+## hear? try removing and check other values maybe observer? b/c of std error
+
+```
+
+## CHECK MODEL FIT
+Will be looking at c-hat for overdispersion, as well as chisq value and its p-value
+```{r gfone, eval=FALSE}
+set.seed(10011)
+#NULL
+fitstats.null <- function(fm0) {
+  observed <- getY(fm0@data)
+  expected <- fitted(fm0)
+  resids <- residuals(fm0)
+  sse <- sum(resids^2)
+  chisq <- sum((observed - expected)^2 / expected)
+  freeTuke <- sum((sqrt(observed) - sqrt(expected))^2)
+  out <- c(SSE=sse, Chisq=chisq, freemanTukey=freeTuke)
+  return(out)
+}
+
+
+(gof.fm.null <- parboot(fm0, fitstats.null, nsim = 1000, report = 1))
+
+# FULL
+
+fitstats.10 <- function(fm.10) {
+  observed <- getY(fm.10@data)
+  expected <- fitted(fm.10)
+  resids <- residuals(fm.10)
+  n.obs <- apply(observed,1,sum,na.rm=TRUE)
+  n.pred <- apply(expected,1,sum,na.rm=TRUE)
+  sse <- sum(resids^2, na.rm=TRUE)
+  chisq <- sum((observed - expected)^2 / expected, na.rm=TRUE)
+  freeTuke <- sum((sqrt(observed) - sqrt(expected))^2, na.rm=TRUE)
+  freeTuke.n <- sum((sqrt(n.obs)-sqrt(n.pred))^2, na.rm=TRUE)
+  sse.n <- sum( (n.obs-n.pred)^2, na.rm=TRUE)
+  chisq.n <- sum((n.obs-n.pred)^2/expected, na.rm=TRUE)
+  
+  out <- c(SSE=sse, Chisq=chisq, freemanTukey=freeTuke, SSE.n=sse.n, Chisq.n=chisq.n, freemanTukey.n=freeTuke.n)
+  return(out)
+}
+
+(gof.fm.10 <- parboot(fm.10, fitstats2, nsim = 1000, report = 1))
+
+print(gof.fm.null)
+print(gof.fm.10)
+
+# compute c-hat: 0.9398  but model not so good...
+chat.10 <- gof.fm.10@t0[2]/mean(gof.fm.10@t.star[,2])
+chat.10
+
+saveRDS(fm.10, here("models/roptfm_15oct22.rds"))
+fm.10 <- readRDS(here("models/roptfm_15oct22.rds"))
+
+
+rp.coef <- as.data.frame(coef(fm.10))
+rp.state.confint <- as.data.frame(confint(fm.10, level = 0.95, type = "state"))
+rp.det.confint <- as.data.frame(confint(fm.10, level = 0.95, type = "det"))
+write.csv(rp.coef, here("output/rpcoef.csv"))
+write.csv(rp.state.confint, here("output/rpci_state.csv"))
+write.csv(rp.det.confint, here("output/rpci_det.csv"))
+
+
+save.image(here("10_ropt_workspace.RData"))
+```
+
+
+## PREDICT!
+
+```{r predict}
+
+# First need to scale study-wide rasters to match scaling of model:
+
+
+elev <- raster("E:/gyrf_analysis/gyrf3/output/dem_400.tif")
+lowshrub <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/lowshrub.tif")
+sparseveg <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/sparseveg.tif")
+tundra <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/tundra.tif")
+
+
+area.raster <- elev 
+values(area.raster) <- 400*400 # area of a grid pixel
+
+# find center/mean and std dev of scaled covariates to scale prediction surfaces above
+
+elev.s <- (elev-185)/106
+
+lowshrub.s <- (lowshrub-0.0562)/0.0794
+
+sparseveg.s <- (sparseveg-0.0818)/0.168
+
+tundra.s <- (tundra-0.57)/0.306
+
+# add detection covariates (standardized mean values)
+
+jul.raster <- elev 
+values(jul.raster) <- mean(all.env.scaled2$julian)
+
+wind.raster <- elev 
+values(wind.raster) <- mean(all.env.scaled2$wind)
+
+minsun.raster <- elev 
+values(minsun.raster) <- mean(all.env.scaled2$min_after_sun)
+
+obs.raster <- elev 
+values(obs.raster) <- as.factor("DS")
+
+
+pred.surface <- stack(elev.s, lowshrub.s, sparseveg.s, tundra.s, area.raster, jul.raster, wind.raster, minsun.raster, obs.raster)
+
+names(pred.surface) <- c("elev", "lowshrub", "sparseveg", "tundra", "area", "julian", "wind", "min_after_sun", "observer")
+
+
+ropt.prediction <- predict(fm.10, type='state', newdata=pred.surface)
+
+ropt.freq <- freq(ropt.prediction, digits = 2)
+
+ropt.freq1 <- as.data.frame(ropt.freq[1])
+
+write.csv(ropt.freq1, here("output/roptcellcounts.csv"))
+
+
+writeRaster(ropt.prediction, filename = names(ropt.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
+
+
+```
+
+
+
+# PREDICTION MAP
+
+```{r roptpredmap}
+
+plot(ropt.prediction, axes=FALSE, col=terrain.colors(100))
+
+sum_raster_cells <-cellStats(ropt.prediction, 'sum')
+sum_raster_cells
+
+
+```
+
+
+# Out of sample prediction
+
+This is a pretty big dataset (for ecology, at least), so if we might choose to do strict out-of-sample prediction, in which we "hold out" 1/4 or 1/3 of our data as a "test" dataset. We will fit the model on the "training" dataset and then assess out-of-sample prediction using the test:
+
+```{r}
+
+colnames(ropt.wide)
+colnames(all.env.scaled2)
+full.data <- merge(ropt.wide, all.env.scaled2)
+
+full.data <- full.data[,c(1:6, 17, 12, 15, 21)]
+full.data$area <- pi*400^2
+
+fitted_value <- data.frame(nrows = 988, ncol = 4)
+
+for(i in 1:nrow(full.data)) { 
+    
+   data_one_row_out<-full.data[-i,] #leaving one row of data out
+  data_to_predict<-full.data[i,] #only the row you are predicting
+
+  timeints <- data_one_row_out[,c(2:6)]
+  siCovs <- data_one_row_out[,c(7:11)]
+
+  one_out_frame <- unmarkedFrameMPois(
+  # import time removal columns(counts):
+  y = timeints, 
+  siteCovs = siCovs,
+  # define pifun type: 
+  type = "removal" )
+  
+  model_fit<-multinomPois( ~ 1 ~ 1 + tundra + lowshrub + sparseveg  + elev + offset(log(area)), data=one_out_frame)# fitting the data to the one row out set
+  
+  fitted_value[i]<-predict(model_fit, type = 'state', newdata=data_to_predict[,c(7:11)])
+  
+}
+
+
+```
+
+
+```{r ppp}
+# Rock Ptarmigan PPP
+
+# Estimate partial prediction plots for predictors with 95% CIs not overlapping zero:
+# Start by creating our datasets to predict over
+
+# how many values do we use:
+n <- 100
+
+# Use the observed values to define our range:
+
+lowshrub.pp <- seq( min( all.env2[,"lowshrub"]),max( all.env2[,"lowshrub"]),
+                   length.out = n )
+
+sparseveg.pp <- seq( min( all.env2[,"sparseveg"]),max( all.env2[,"sparseveg"]),
+                   length.out = n )
+
+#standardize predictors:
+lowshrub.std <- scale( lowshrub.pp )
+sparseveg.std <- scale( sparseveg.pp )
+area.x = 400*400
+
+```
+
+```{r}
+### Low shrub
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+abundData <- data.frame( tundra = 0, lowshrub = lowshrub.std, sparseveg = 0, elev = 0, area = area.x )
+
+#predict partial relationship:
+pred.lows <- predict( fm.10, type = "state", newdata = abundData, 
+                          appendData = TRUE )
+#view
+head( pred.lows ); dim( pred.lows )
+
+
+### plot
+
+r.lowsp <- cbind( pred.lows[,c("Predicted", "lower", "upper") ], lowshrub.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = lowshrub.pp, y = Predicted ) ) + 
+  #choose preset look
+  ylim(0, 0.2) +
+  theme_bw( base_size = 50 ) +
+  # add labels
+  labs( x = "Low shrub (%)", y = "Rock Ptarmigan \n relative abundance" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=60)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 1.5, alpha = 0.5, color = "grey" ) +
+  # add mean line on top
+  geom_line( size = 2 ) 
+#view
+r.lowsp
+ggsave("RockXLow2.png", width = 7, height = 7,dpi = 300)
+
+
+```
+
+
+```{r spveg}
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+abundData <- data.frame( tundra = 0, lowshrub = 0, sparseveg = sparseveg.std, elev = 0, area = area.x )
+
+#predict partial relationship:
+pred.sv <- predict( fm.10, type = "state", newdata = abundData, 
+                          appendData = TRUE )
+#view
+head( pred.sv ); dim( pred.sv )
+
+
+### plot
+
+r.svp <- cbind( pred.sv[,c("Predicted", "lower", "upper") ], sparseveg.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = sparseveg.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 0.2) +
+  theme_bw( base_size = 50 ) +
+  # add labels
+  labs( x = "Sparse veg (%)", y = "Rock Ptarmigan \n relative abundance" ) +
+  # add band of confidence intervals
+  #theme(axis.title.y=element_blank()) +
+  theme(text=element_text(size=60)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 1.5, alpha = 0.5, color = "grey" ) +
+  # add mean line on top
+  geom_line( size = 2 ) 
+
+r.svp
+
+ggsave("RockXSparse2.png", width = 7, height = 7,dpi = 300)
+
+
+
+```
+
+```{r}
+figure2 <- ggarrange(lowsp, svp,
+                    ncol = 2, nrow = 1)
+
+
+figure2
+ggsave("roptfigs.png", width = 30, height = 10, dpi = 300, limitsize = FALSE)
+
+save.image(here("10_ropt_workspace.RData"))
+
+```
+
+
+
+
+```{r}
+library(ggpubr)
+
+figure3 <- ggarrange(r.lowsp, r.svp, w.tundp, w.allsp, w.tussp, w.elevp, s.lowsp, s.svp, s.elevp,
+                    ncol = 3, nrow = 3)
+
+figure3
+
+ggsave("allspfigs.png", width = 60, height = 40, dpi = 300, limitsize = FALSE)
+
+```
+
+
+
+

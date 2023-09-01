@@ -1,0 +1,726 @@
+---
+title: "08_squir"
+author: "Michaela Gustafson"
+date: "1/4/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## TIME REMOVAL ANALYSIS: ARCTIC GROUND SQUIRREL
+
+In this code I will be running my time-removal abundance model for Arctic Ground Squirrels.
+
+
+Habitat Description from Alaska Dept. F&G
+The arctic ground squirrel ranges across northern, eastern, and southwestern Alaska at elevations ranging from sea level to well above mountain tree lines. It is the only ground squirrel species in its range. They occur in tundra, meadow, riverbank, and lakeshore habitats with loose soils that provide early vegetation.
+
+Arctic ground squirrels show how human modifications to the landscape can alter the range of wild animals. Having discovered that the loosened ground along road shoulders is good for burrow construction, arctic ground squirrels are now common throughout the road system—not just in their typical habitat of dry, open, often rocky tundra. They sometimes den in soft sandy soils along the coast where they may drown in unusually high fall storm surges or easily be dug up for a grizzly’s meal.
+
+
+
+
+
+## LIBRARY
+These are the packages used in the following code:
+```{r library}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(unmarked)
+library(AICcmodavg)
+library(raster)
+library(here)
+library(AHMbook)
+library(Hmisc)
+library(shiny)
+```
+
+
+## LOAD OBSERVATION and ENVIRONMENTAL DATA
+
+```{r loaddata}
+all.obs <- read.csv(here("output/obs_3years.csv"))
+lc.vars <- read.csv(here("output/data_pts_17Aug.csv")) #these are the land cover characteristics and elevation we extracted in the previous code 
+
+site.vars <- read.csv(here("output/env_3years.csv")) #these are the data collected at the beginning of each survey (temp, wind, etc.)
+
+# remove extra 'X' column from all.obs and site.vars
+all.obs <- all.obs[,-c(1)]
+site.vars <- site.vars[,-c(1)]
+# inspect
+
+head(all.obs)
+head(lc.vars)
+head(site.vars)
+
+# looks good
+
+# fix that one council site that's name is always messed up
+
+lc.vars[8,1] <- "COUN_3_12_4"
+
+# and the temperature that's missing
+
+site.vars[552,6] <- "42"
+
+
+all.env2 <- left_join(lc.vars, site.vars)
+
+write.csv(all.env2, here("output/final_env_join_22Aug22.csv"))
+
+# I would use this code below if I were to reload the 'final_env_join_*date*.csv' into another script or rerun this script and not have to do all the cleaning and joining above:
+all.env2 <- read.csv(here("output/final_env_join_22Aug22.csv"))
+all.env2 <- all.env2[,c(2:25)]
+
+# create column that is open shrub and tall shrub categories combined and one that is all shrub (tall, open, and low):
+str(all.env2)
+
+for (i in 1:nrow(all.env2)) {
+   all.env2$shrub[i] <- all.env2$openshrub[i] + all.env2$tallshrub[i]
+}
+
+for (i in 1:nrow(all.env2)) {
+   all.env2$allshrub[i] <- all.env2$openshrub[i] + all.env2$tallshrub[i] + all.env2$lowshrub[i]
+}
+```
+
+## PREP OBSERVATION DATA FOR SELECTED SPECIES
+
+```{r squirprep}
+# copy observation data table for SQUIR
+
+squir <- data.frame(all.obs)
+
+# change all species codes of SQUIR to a 1 and all other species to 0
+squir$species[squir$species == "SQUIR"] <- 1
+squir$species[squir$species == "AGSQ"] <- 1
+squir$species[squir$species != "1"] <- 0
+
+# change count to 0 for non SQUIR
+squir$count[squir$species == 0] <- 0
+head(squir)
+# now 'squir' df represents counts for SQUIR
+
+# check for na values
+sum(is.na(squir$time_int))
+
+
+# change time intervals to reflect intervals of 2 minutes
+squir2 <- mutate(squir, 
+                time_int = ifelse(squir$time_int %in% 0:1, "1", 
+                                  ifelse(squir$time_int %in% 2:3, "2", 
+                                         ifelse(squir$time_int %in% 4:5, "3",
+                                                ifelse(squir$time_int %in% 6:7, "4",
+                                                       ifelse(squir$time_int %in% 8:9, "5", "NA"))))))
+
+
+# aggregate rows and sum counts for matching keys and time intervals
+# must change formats first:
+
+str(squir2)
+
+squir2$id <- as.factor(squir2$id)
+squir2$time_int <- as.factor(squir2$time_int)
+squir2$count <- as.integer(squir2$count)
+
+squir.agg <- aggregate(x = squir2$count, 
+                      by = list(squir2$id, squir2$time_int), 
+                      FUN = sum)
+
+
+
+
+# rename columns in aggregated df
+
+head(squir.agg)
+
+names(squir.agg)[names(squir.agg) == "Group.1"] <- "id"
+names(squir.agg)[names(squir.agg) == "Group.2"] <- "time_int"
+names(squir.agg)[names(squir.agg) == "x"] <- "count"
+
+head(squir.agg)
+
+# okay so squir.agg is our count dataframe, we don't need any of the other columns,
+# those were only used to help filter out for distance and flyover observatiosn
+
+# check that ids are matching between env and obs
+# need to change id to a factor to use anti-join
+all.env2$id <- as.factor(all.env2$id)
+miss1 <- anti_join(all.env2, squir.agg) # clear
+miss2 <- anti_join(squir.agg, all.env2) # clear
+
+# nothing missing! 
+
+
+# spread dataframes:
+
+unique(squir.agg$id) # should end up with 988 levels
+
+
+squir.wide <- squir.agg %>%
+  dplyr::select(id, time_int, count) %>%
+  spread(key = time_int, value = count, fill = 0)
+
+#write.csv(squir.wide, here("output/squir_wide_13Sept22.csv"))
+squir.wide <- read.csv(here("output/squir_wide_13Sept22.csv"))
+squir.wide <- squir.wide[,-c(1)]
+
+sum(squir.wide[,c(2:6)])
+
+# SQUIRREL SAMPLE SIZE: 80
+
+```
+
+## CHECK DATA FOR CORRELATIONS, ETC.
+
+
+### Scale and look at correlations
+
+```{r corrtest}
+
+test.df <- left_join(squir.wide, all.env2)
+test.df$total <- rowSums(test.df[,c("1", "2", "3", "4", "5")])
+sum(test.df$total)
+
+
+a1 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total[which(test.df$total!=0)])), x = test.df$sparseveg))
+a1 # this one looks fine - definitely less plots surveyed with sparse veg but the detections/counts are evenly spread
+
+a2 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total)), x = test.df$tundra))
+a2
+
+a3 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total)), x = test.df$shrub))
+a3 # this one there may be an outlier
+
+a4 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total)), x = test.df$barren))
+a4 # possible outliers here as well ### NO BARREN IN MODEL - match for ropt model
+
+a5 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total)), x = test.df$lowshrub))
+a5 # also seems fine
+
+a6 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total)), x = test.df$allshrub))
+a6 # maybe change from using low shrub to using all shrub in squir + ropt model since had to use all shrub in wipt model...
+
+a7 <- ggplot( data = test.df) + geom_histogram( aes_string( fill = (as.factor(test.df$total)), x = test.df$shrub))
+a7
+
+
+
+# scale numerical predictors
+#scale predictors:
+str(all.env2)
+
+jul.scaled <- scale(all.env2$julian)
+min.scaled <- scale(all.env2$min_after_sun)
+temp.scaled <- scale(as.numeric(all.env2$tempf))
+wind.scaled <- scale(all.env2$wind)
+t.scaled <- scale(all.env2$tundra)
+tuss.scaled <- scale(all.env2$tussock)
+ls.scaled <- scale(all.env2$lowshrub)
+ts.scaled <- scale(all.env2$tallshrub)
+os.scaled <- scale(all.env2$openshrub)
+b.scaled <- scale(all.env2$barren)
+spveg.scaled <- scale(all.env2$sparseveg)
+elev.scaled <- scale(all.env2$elev)
+egfor.scaled <- scale(all.env2$egforest)
+dec.scaled <- scale(all.env2$decforest)
+mix.scaled <- scale(all.env2$mixforest)
+wood.scaled <- scale(all.env2$woodland)
+fen.scaled <- scale(all.env2$fen)
+litt.scaled <- scale(all.env2$littoral)
+wat.scaled <- scale(all.env2$water)
+shrub.scaled <- scale(all.env2$shrub)
+all.scaled <- scale(all.env2$allshrub)
+steep.scaled <- scale(all.env2$steep)
+
+# create scaled dataframe
+all.env.scaled <- data.frame(all.env2)
+
+# replace variables with scaled ones
+all.env.scaled$julian <- jul.scaled
+all.env.scaled$min_after_sun <- min.scaled
+all.env.scaled$tempf <- temp.scaled
+all.env.scaled$wind <- wind.scaled
+all.env.scaled$tundra <- t.scaled
+all.env.scaled$tussock <- tuss.scaled
+all.env.scaled$lowshrub <- ls.scaled
+all.env.scaled$tallshrub <- ts.scaled
+all.env.scaled$openshrub <- os.scaled
+all.env.scaled$barren <- b.scaled
+all.env.scaled$sparseveg <- spveg.scaled
+all.env.scaled$elev <- elev.scaled
+all.env.scaled$egforest <- egfor.scaled
+all.env.scaled$decforest <- dec.scaled
+all.env.scaled$mixforest <- mix.scaled
+all.env.scaled$woodland <- wood.scaled
+all.env.scaled$fen <- fen.scaled
+all.env.scaled$littoral <- litt.scaled
+all.env.scaled$water <- wat.scaled
+all.env.scaled$shrub <- shrub.scaled
+all.env.scaled$allshrub <- all.scaled
+all.env.scaled$steep <- steep.scaled
+
+str(all.env.scaled)
+colnames(all.env.scaled)
+
+
+
+# make correlation matrix
+
+
+colnames(all.env.scaled)
+cor.matrix <- as.matrix(all.env.scaled[,c(2:18, 20, 22, 24, 26:27)])
+# first test for normality
+
+
+cor.mat <- rcorr(as.matrix(all.env.scaled[,c(2:18, 20, 22, 24, 26:27)]),type="pearson")
+cor.mat
+
+
+# no variables with correlation r>0.65 but elevation and range(steepness) 0.6
+# all shrubs has -0.65 with tundra and p-value = 0.000 so it has a moderate correlation
+
+#write.csv(all.env.scaled, here("output/all.env.scaled_22Aug22.csv"))
+all.env.scaled <- read.csv(here("output/all.env.scaled_22Aug22.csv"))
+all.env.scaled <- all.env.scaled[,-c(1)]
+```
+
+Most variables have correlations <0.65 (need to cite the reference for this/find the reference first hahahah)
+
+elevation and range(steepness) 0.6
+all_shrubs has -0.664951061 with tundra
+
+## TIME-REMOVAL MODEL
+
+```{r trmodel}
+
+# check structures and join data frames
+
+all.env.scaled$year <- as.factor(all.env.scaled$year)
+
+squir.env.join <- left_join(squir.wide, all.env.scaled)
+head(squir.env.join); dim(squir.env.join)
+str(squir.env.join)
+
+# create observation and site covariate data frames
+colnames(squir.env.join)
+
+timeints <- squir.env.join[,c(2:6)]
+siCovs <- squir.env.join[,c(7:32)]
+area <- pi*400^2
+
+squirFrame2 <- unmarkedFrameMPois(
+  # import time removal columns(counts):
+  y = timeints, 
+  siteCovs = data.frame(siCovs, area), #area is for offset for prediction surface
+  # define pifun type: 
+  type = "removal" )
+
+# fit models: multinomPois order of formulas: detection, abundance
+# I will only be running a null model and a full model. Not gonna mess around with that multiple model bullshit
+# can't use all land cover variables because they add up to 1 within each site (and not all are biologically relevant)
+
+fm0 <- multinomPois(~ 1 ~ 1, data = squirFrame2) #null model
+
+#fm.1 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + sparseveg + tallshrub + elev + offset(log(area)), data = squirFrame2)
+
+#fm.2 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + sparseveg + openshrub + elev + offset(log(area)), data = squirFrame2)
+
+#fm.3 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + sparseveg + elev + offset(log(area)), data = squirFrame2)
+
+fm.4 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + sparseveg + lowshrub + elev + offset(log(area)), data = squirFrame2)
+
+fm.4.2 <- multinomPois( ~ -1 + julian + min_after_sun + wind + observer ~ -1 + tundra + sparseveg + lowshrub + elev + offset(log(area)), data = squirFrame2)
+
+#fm.44 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra  + lowshrub + sparseveg + elev + offset(log(area)), data = squirFrame2)
+
+#fm.5 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + elev + offset(log(area)), data = squirFrame2)
+
+#fm.6 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + allshrub + elev + offset(log(area)), data = squirFrame2)
+
+#fm.7 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + sparseveg + allshrub + elev + offset(log(area)), data = squirFrame2)
+
+#fm.8 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + sparseveg + steep + elev + offset(log(area)), data = squirFrame2)
+
+#fm.9 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + sparseveg + allshrub + elev + offset(log(area)), data = squirFrame2)
+
+#fm.11 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + allshrub + sparseveg + elev + offset(log(area)), data = squirFrame2)
+
+#fm.14 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + sparseveg + lowshrub + barren + elev + offset(log(area)), data = squirFrame2)
+
+ms2 <- fitList(
+  "lam(.)p(.)" = fm0,
+  "lam(tundra+sparseveg+lowshrub+elev+offset(log(area)))p(julian+min_after_sun+wind+observer)" = fm.4)
+
+
+(ms2sel <- modSel(ms2))
+ms2sel
+
+summary(fm0)
+
+summary(fm.1)
+
+summary(fm.2)
+
+summary(fm.3)
+
+summary(fm.4)  ###**** tundra sparseveg lowshrub
+
+summary(fm.4.2)
+
+summary(fm.5)
+
+summary(fm.6)
+
+#summary(fm.7)
+
+summary(fm.8)
+
+summary(fm.9)
+
+summary(fm.11)
+summary(fm.44)
+
+library(modelsummary)
+library(broom.mixed)
+library(jtools)
+library(ggstance)
+library(gtsummary)
+
+
+sq.coef <- as.data.frame(coef(fm.4))
+write.csv(sq.coef, here("output/sqcoef.csv"))
+
+plogis(-3.01) # WIPT: 0.04697615
+plogis(-2.33) # ROPT: 0.08866866
+plogis(-3.92) # AGSQ: 0.01945508
+
+?confint
+sq.state.confint <- as.data.frame(confint(fm.4, level = 0.95, type = "state"))
+sq.det.confint <- as.data.frame(confint(fm.4, level = 0.95, type = "det"))
+
+write.csv(sq.state.confint, here("output/sqci_state.csv"))
+write.csv(sq.det.confint, here("output/sqci_det.csv"))
+
+#saveRDS(fm.4, here("models/squirfm4_27oct22.rds"))
+fm.4 <- readRDS(here("models/squirfm4_27oct22.rds"))
+```
+
+
+
+
+
+
+## CHECK MODEL FIT
+
+```{r fitstats}
+
+# check residual plots???
+
+
+
+set.seed(2022)
+
+
+#(gof.null <- parboot(object = fm0, statistic = fitstats2, nsim = 1000, report = 1))
+#gof.null
+
+#(gof.fm <- parboot(object = fm.3, statistic = fitstats2, nsim = 1000, report = 1))
+gof.fm
+
+(gof.fm4 <- parboot(object = fm.4, statistic = fitstats2, nsim = 1000, report = 1))
+gof.fm4
+
+#chat3 <- gof.fm@t0[2]/mean(gof.fm@t.star[,2])
+#chat3 ### 0.687
+
+
+chat4 <- gof.fm4@t0[2]/mean(gof.fm4@t.star[,2])
+chat4
+
+## CHAT: 0.8160915 
+
+
+
+
+# FULL
+
+fitstats.4 <- function(fm.4) {
+  observed <- getY(fm.4@data)
+  expected <- fitted(fm.4)
+  resids <- residuals(fm.4)
+  n.obs <- apply(observed,1,sum,na.rm=TRUE)
+  n.pred <- apply(expected,1,sum,na.rm=TRUE)
+  sse <- sum(resids^2, na.rm=TRUE)
+  chisq <- sum((observed - expected)^2 / expected, na.rm=TRUE)
+  freeTuke <- sum((sqrt(observed) - sqrt(expected))^2, na.rm=TRUE)
+  freeTuke.n <- sum((sqrt(n.obs)-sqrt(n.pred))^2, na.rm=TRUE)
+  sse.n <- sum( (n.obs-n.pred)^2, na.rm=TRUE)
+  chisq.n <- sum((n.obs-n.pred)^2/expected, na.rm=TRUE)
+  
+  out <- c(SSE=sse, Chisq=chisq, freemanTukey=freeTuke, SSE.n=sse.n, Chisq.n=chisq.n, freemanTukey.n=freeTuke.n)
+  return(out)
+}
+
+(gof.fm.4 <- parboot(fm.4, fitstats.4, nsim = 1000, report = 1))
+
+#print(gof.fm.null)
+print(gof.fm.4)
+
+# compute c-hat
+chat.4 <- gof.fm.4@t0[2]/mean(gof.fm.4@t.star[,2])
+chat.4 # 0.8144976 on 29 Nov 2022
+
+
+
+#saveRDS(fm.4, "E:/gyrf_analysis/gyrf3/models/squirfm_13Sept22.rds")
+#fm.4 <- readRDS(here("models/squirfm_13Sept22.rds"))
+
+
+```
+ 
+## PREDICT!
+
+```{r predict}
+#fm.full <- readRDS("E:/gyrf_analysis/gyrf3/models/squirfm.rds")
+# First need to scale study-wide rasters to match scaling of model:
+
+elev <- raster("E:/gyrf_analysis/gyrf3/output/dem_400.tif")
+lowshrub <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/lowshrub.tif")
+sparseveg <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/sparseveg.tif")
+tundra <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/tundra.tif")
+
+
+area.raster <- elev # CHANGE BACK TO ELEVATION ONCE GET RASTER LAYER
+values(area.raster) <- 400*400 # area of a grid pixel
+
+# find center/mean and std dev of scaled covariates to scale prediction surfaces above
+
+
+elev.s <- (elev-185)/106
+
+
+lowshrub.s <- (lowshrub-0.0562)/0.0794
+
+
+sparseveg.s <- (sparseveg-0.0818)/0.168
+
+
+tundra.s <- (tundra-0.57)/0.306
+
+
+# add detection covariates (standardized mean values)
+
+jul.raster <- elev 
+values(jul.raster) <- mean(all.env.scaled$julian)
+
+wind.raster <- elev 
+values(wind.raster) <- mean(all.env.scaled$wind)
+
+minsun.raster <- elev 
+values(minsun.raster) <- mean(all.env.scaled$min_after_sun)
+
+obs.raster <- elev 
+values(obs.raster) <- as.factor("DS")
+
+
+
+pred.surface <- stack(elev.s, lowshrub.s, sparseveg.s, tundra.s, area.raster, jul.raster, wind.raster, minsun.raster, obs.raster)
+
+names(pred.surface) <- c("elev", "lowshrub", "sparseveg", "tundra", "area", "julian", "wind", "min_after_sun", "observer")
+
+
+
+
+
+sq.prediction <- predict(fm.4, type="state", newdata=pred.surface)
+
+ncell(sq.prediction) # 169556 cells in raster
+cellStats(sq.prediction, 'sum')
+
+
+
+squir.freq <- freq(sq.prediction, digits = 2)
+
+squir.freq1 <- as.data.frame(squir.freq[1])
+
+write.csv(squir.freq1, here("output/squircellcounts.csv"))
+
+
+
+writeRaster(sq.prediction, filename = names(sq.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
+```
+
+
+
+# PREDICTION MAP
+
+```{r squirpredmap}
+
+plot(sq.prediction, axes=FALSE, col=terrain.colors(100))
+
+sum_raster_cells <-cellStats(sq.prediction, 'sum')
+sum_raster_cells
+```
+
+# Partial Prediction Plots
+
+```{r ppp}
+
+# Elevation PPP
+
+# Estimate partial prediction plots for predictors with 95% CIs not overlapping zero:
+# Start by creating our datasets to predict over
+
+# how many values do we use:
+n <- 100
+
+# Use the observed values to define our range:
+elevation.pp <- seq( min( all.env2[,"elev"]),max(500),
+                   length.out = n )
+
+lowshrub.pp <- seq( min( all.env2[,"lowshrub"]),max( all.env2[,"lowshrub"]),
+                   length.out = n )
+
+sparseveg.pp <- seq( min( all.env2[,"sparseveg"]),max( all.env2[,"sparseveg"]),
+                   length.out = n )
+
+#standardize predictors:
+elev.std <- scale( elevation.pp )
+lowshrub.std <- scale( lowshrub.pp )
+sparseveg.std <- scale( sparseveg.pp )
+area.x = 400*400
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+abundData <- data.frame( tundra = 0, lowshrub = 0, sparseveg = 0, elev = elev.std, area = area.x )
+
+#predict partial relationship:
+pred.elev <- predict( fm.4, type = "state", newdata = abundData, 
+                          appendData = TRUE )
+#view
+head( pred.elev ); dim( pred.elev )
+
+
+### plot
+
+s.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 0.35) +
+  theme_bw( base_size = 50 ) +
+  # add labels
+  labs( x = "Elevation (m)", y = "Arctic ground squirrel \n relative abundance") +
+  # add band of confidence intervals
+  #theme(axis.title.y=element_blank()) +
+  theme(text=element_text(size=60)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 1.5, alpha = 0.5, color = "grey" ) +
+  # add mean line on top
+  geom_line( size = 2 )
+#view
+s.elevp
+
+
+ggsave("SquirXElev2.png", width = 7.5, height = 7.5, dpi = 300)
+
+```
+
+```{r lowshrubppp}
+### Low shrub plot
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+abundData <- data.frame( tundra = 0, lowshrub = lowshrub.std, sparseveg = 0, elev = 0, area = area.x )
+
+#predict partial relationship:
+pred.lows <- predict( fm.4, type = "state", newdata = abundData, 
+                          appendData = TRUE )
+#view
+head( pred.lows ); dim( pred.lows )
+
+
+### plot
+
+s.lowsp <- cbind( pred.lows[,c("Predicted", "lower", "upper") ], lowshrub.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = lowshrub.pp, y = Predicted ) ) + 
+  #ylim(0, 0.35) +
+  #choose preset look
+  theme_bw( base_size = 50 ) +
+  # add labels
+  labs( x = "Low shrub (%)", y = "Arctic ground squirrel \n relative abundance" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=60)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 1.5, alpha = 0.5, color = "grey" ) +
+  # add mean line on top
+  geom_line( size = 2 )
+#view
+s.lowsp
+
+ggsave("SquirXLow2.png", width = 7.5, height = 7.5, dpi = 300)
+
+```
+
+```{r sparsevegppp}
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+abundData <- data.frame( tundra = 0, lowshrub = 0, sparseveg = sparseveg.std, elev = 0, area = area.x )
+
+#predict partial relationship:
+pred.sv <- predict( fm.4, type = "state", newdata = abundData, 
+                          appendData = TRUE )
+#view
+head( pred.sv ); dim( pred.sv )
+
+
+### plot
+
+s.svp <- cbind( pred.sv[,c("Predicted", "lower", "upper") ], sparseveg.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = sparseveg.pp, y = Predicted ) ) + 
+  #choose preset look
+ # ylim(0, 0.35) +
+  theme_bw( base_size = 50 ) +
+  # add labels
+  labs( x = "Sparse veg (%)", y = "Arctic ground squirrel \n relative abundance") + 
+  # add band of confidence intervals
+  #theme(axis.title.y=element_blank()) +
+  theme(text=element_text(size=60)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 1.5, alpha = 0.5, color = "grey" ) +
+  # add mean line on top
+  geom_line( size = 2 )
+#view
+s.svp
+
+ggsave("SquirXSparse3.png", width = 7.5, height = 7.5, dpi = 300)
+
+
+
+
+```
+
+
+```{r}
+figure2 <- ggarrange(lowsp, svp, elevp,
+                    ncol = 3, nrow = 1)
+
+
+figure2
+ggsave("allsquirfigs2.png", width = 30, height = 10, dpi = 300, limitsize = FALSE)
+
+save.image(here("08_squir_workspace.RData"))
+
+```
+
+
