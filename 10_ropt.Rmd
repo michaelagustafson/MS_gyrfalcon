@@ -223,6 +223,21 @@ timeints <- ropt.env.join[,c(2:6)]
 siCovs <- ropt.env.join[,c(7:32)]
 area <- pi*400^2
 
+#turn year into factor
+siCovs$year <- as.factor( siCovs$year )
+
+#convert to presence/absence
+presy <- timeints
+presy$X1[ which( presy$X1 > 1 ) ] <- 1
+presy$X2[ which( presy$X2 > 1 ) ] <- 1
+presy$X3[ which( presy$X3 > 1 ) ] <- 1
+presy$X4[ which( presy$X4 > 1 ) ] <- 1
+presy$X5[ which( presy$X5 > 1 ) ] <- 1
+
+umf <- unmarkedFrameOccu( y = presy,
+              siteCovs = data.frame(siCovs, area)
+)
+
 
 roptFrame2 <- unmarkedFrameMPois(
   # import time removal columns(counts):
@@ -236,6 +251,16 @@ roptFrame2 <- unmarkedFrameMPois(
 # can't use all land cover variables because htey add up to 1 within each site
 
 ### ADD WIND BACK IN??? AND DEM FOR TEST
+ocm1 <- occu( ~ 1 + julian + min_after_sun + wind + observer 
+              ~ 1 + lowshrub + sparseveg + barren + elev + year, 
+            data = umf )
+
+ocm2 <- occu( ~ 1 + julian + min_after_sun + wind + observer 
+              ~ 1 + lowshrub + sparseveg + barren + elev , 
+            data = umf )
+
+confint( ocm2, type = "state" )
+confint( ocm2, type = "det" )
 
 fm0 <- multinomPois(~ 1 ~ 1, data = roptFrame2) #null model
 fm.1 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + shrub + elev + offset(log(area)), data = roptFrame2)
@@ -252,7 +277,7 @@ ms2 <- fitList(
 (ms2sel <- modSel(ms2))
 ms2sel
 
-
+ocmsel <- modSel( fitList( "noyear" = ocm1, "year" = ocm2 ) )
 summary(fm0)
 summary(fm.1)
 

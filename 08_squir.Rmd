@@ -312,6 +312,20 @@ timeints <- squir.env.join[,c(2:6)]
 siCovs <- squir.env.join[,c(7:32)]
 area <- pi*400^2
 
+head(timeints)
+#convert to presence/absence
+presy <- timeints
+presy$X1[ which( presy$X1 > 1 ) ] <- 1
+presy$X2[ which( presy$X2 > 1 ) ] <- 1
+presy$X3[ which( presy$X3 > 1 ) ] <- 1
+presy$X4[ which( presy$X4 > 1 ) ] <- 1
+presy$X5[ which( presy$X5 > 1 ) ] <- 1
+
+umf <- unmarkedFrameOccu( y = presy,
+              siteCovs = data.frame(siCovs, area)
+)
+                                
+
 squirFrame2 <- unmarkedFrameMPois(
   # import time removal columns(counts):
   y = timeints, 
@@ -334,6 +348,13 @@ fm0 <- multinomPois(~ 1 ~ 1, data = squirFrame2) #null model
 fm.4 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + sparseveg + lowshrub + elev + offset(log(area)), data = squirFrame2)
 
 fm.4.2 <- multinomPois( ~ -1 + julian + min_after_sun + wind + observer ~ -1 + tundra + sparseveg + lowshrub + elev + offset(log(area)), data = squirFrame2)
+
+ocm1 <- occu( ~ 1 + julian + min_after_sun + wind + observer 
+              ~ 1 + tundra + sparseveg + lowshrub + elev, 
+            data = umf )
+
+confint( ocm1, type = "state" )
+confint( ocm1, type = "det" )
 
 #fm.44 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra  + lowshrub + sparseveg + elev + offset(log(area)), data = squirFrame2)
 
