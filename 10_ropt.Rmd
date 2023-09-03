@@ -246,11 +246,17 @@ roptFrame2 <- unmarkedFrameMPois(
   # define pifun type: 
   type = "removal" )
 
+umf.nb <- unmarkedFrameGMM( y = timeints, 
+  siteCovs = data.frame(siCovs, area),
+  type = "removal",
+  numPrimary = 1 )
+
 # fit models: multinomPois order of formulas: detection, abundance
 # I will only be running a null model and a full model. Not gonna mess around with that multiple model bullshit
 # can't use all land cover variables because htey add up to 1 within each site
 
 ### ADD WIND BACK IN??? AND DEM FOR TEST
+### occupancy models
 ocm1 <- occu( ~ 1 + julian + min_after_sun + wind + observer 
               ~ 1 + lowshrub + sparseveg + barren + elev + year, 
             data = umf )
@@ -261,12 +267,54 @@ ocm2 <- occu( ~ 1 + julian + min_after_sun + wind + observer
 
 confint( ocm2, type = "state" )
 confint( ocm2, type = "det" )
+#negative binomial and ZIP versions
 
+nbm1 <- gmultmix(
+  #abundance
+  ~ 1 + + tundra + lowshrub + sparseveg  + elev, #+ offset(log(area)), 
+  ~1 ,
+  ~ 1 + julian + min_after_sun + wind + observer,
+    mixture = "NB",
+  umf.nb, engine="R" )
+#model didn't run with area as offset
+summary(nbm1)
+
+#rerun the Poisson model for model comparison
+nbm2 <- gmultmix(
+  #abundance
+  ~ 1 + + tundra + lowshrub + sparseveg  + elev, #+ offset(log(area)), 
+  ~1 ,
+  ~ 1 + julian + min_after_sun + wind + observer,
+    mixture = "P",
+  umf.nb, engine="R" )
+#model didn't run with area as offset
+summary(nbm2)
+
+#with log area
+nbm3 <- gmultmix(
+  #abundance
+  ~ 1 + + tundra + lowshrub + sparseveg  + elev+ offset(log(area)), 
+  ~1 ,
+  ~ 1 + julian + min_after_sun + wind + observer,
+    mixture = "P",
+  umf.nb, engine="R" )
+#doesn't run 
+
+#comparing output between three models
+confint( nbm1, type = "lambda" )
+confint( nbm2, type = "lambda" )
+confint( fm.10, type = "state" )
+
+# poisson model
 fm0 <- multinomPois(~ 1 ~ 1, data = roptFrame2) #null model
 fm.1 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + shrub + elev + offset(log(area)), data = roptFrame2)
 fm.10 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + lowshrub + sparseveg  + elev + offset(log(area)), data = roptFrame2)
 fm.11 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + lowshrub + sparseveg + barren + elev + offset(log(area)), data = roptFrame2)
 
+#does model need a NB?
+msnb <- fitList( "noNB" = nbm1, "Poisson" = nbm2  )
+(msel <- modSel(msnb))
+#negative binomial is a much much better fit
 
 ms2 <- fitList(
   "lam(.)p(.)" = fm0,
