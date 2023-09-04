@@ -431,6 +431,20 @@ fm.4 <- readRDS(here("models/squirfm4_27oct22.rds"))
 ```
 
 
+NEGATIVE BINOMIAL MODEL
+```{r nb}
+# For the NB need to create an unmarkedFrameGMM and specify that it is removal
+
+squir.nb <- unmarkedFrameGMM(
+  # import time removal columns(counts):
+  y = timeints, 
+  siteCovs = data.frame(siCovs, area), #area is for offset for prediction surface
+  # define pifun type: 
+  type = "removal",
+  piF)
+
+
+```
 
 
 
