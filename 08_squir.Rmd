@@ -631,19 +631,20 @@ head( pred.elev ); dim( pred.elev )
 s.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
   # define x and y values
   ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
+  ylim(0,0.4) +
   #choose preset look
   #ylim(0, 0.35) +
-  theme_bw( base_size = 50 ) +
+  theme_classic( base_size = 15) +
   # add labels
   labs( x = "Elevation (m)", y = "Arctic ground squirrel \n relative abundance") +
   # add band of confidence intervals
   #theme(axis.title.y=element_blank()) +
-  theme(text=element_text(size=60)) +
+  theme(text=element_text(size=25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, color = "grey" ) +
+               size = 1.5, alpha = 0.5, fill = "darksalmon" ) +
   # add mean line on top
-  geom_line( size = 2 )
+  geom_line( size = 2, color = "darkred" )
 #view
 s.elevp
 
