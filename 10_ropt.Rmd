@@ -246,6 +246,7 @@ roptFrame2 <- unmarkedFrameMPois(
   # define pifun type: 
   type = "removal" )
 
+#creating dataframe for negative binomial model 
 umf.nb <- unmarkedFrameGMM( y = timeints, 
   siteCovs = data.frame(siCovs, area),
   type = "removal",
