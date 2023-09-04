@@ -310,7 +310,7 @@ colnames(squir.env.join)
 
 timeints <- squir.env.join[,c(2:6)]
 siCovs <- squir.env.join[,c(7:32)]
-area <- pi*400^2
+area <- pi*400^2/10000
 
 head(timeints)
 #convert to presence/absence
@@ -332,6 +332,7 @@ squirFrame2 <- unmarkedFrameMPois(
   siteCovs = data.frame(siCovs, area), #area is for offset for prediction surface
   # define pifun type: 
   type = "removal" )
+
 
 # fit models: multinomPois order of formulas: detection, abundance
 # I will only be running a null model and a full model. Not gonna mess around with that multiple model bullshit
@@ -412,8 +413,10 @@ library(ggstance)
 library(gtsummary)
 
 
-sq.coef <- as.data.frame(coef(fm.4))
-write.csv(sq.coef, here("output/sqcoef.csv"))
+sq.coef <- as.data.frame(coef(nbm1))
+sq.coef2 <- as.data.frame(coef(fm.4))
+write.csv(sq.coef, here("model output/sqcoef.csv"))
+write.csv(sq.coef2, here("model output/sqcoef2.csv"))
 
 plogis(-3.01) # WIPT: 0.04697615
 plogis(-2.33) # ROPT: 0.08866866
@@ -423,8 +426,8 @@ plogis(-3.92) # AGSQ: 0.01945508
 sq.state.confint <- as.data.frame(confint(fm.4, level = 0.95, type = "state"))
 sq.det.confint <- as.data.frame(confint(fm.4, level = 0.95, type = "det"))
 
-write.csv(sq.state.confint, here("output/sqci_state.csv"))
-write.csv(sq.det.confint, here("output/sqci_det.csv"))
+write.csv(sq.state.confint, here("model output/sqci_state.csv"))
+write.csv(sq.det.confint, here("model output/sqci_det.csv"))
 
 #saveRDS(fm.4, here("models/squirfm4_27oct22.rds"))
 fm.4 <- readRDS(here("models/squirfm4_27oct22.rds"))
@@ -433,15 +436,41 @@ fm.4 <- readRDS(here("models/squirfm4_27oct22.rds"))
 
 NEGATIVE BINOMIAL MODEL
 ```{r nb}
-# For the NB need to create an unmarkedFrameGMM and specify that it is removal
+#negative binomial and ZIP versions
 
-squir.nb <- unmarkedFrameGMM(
-  # import time removal columns(counts):
-  y = timeints, 
-  siteCovs = data.frame(siCovs, area), #area is for offset for prediction surface
-  # define pifun type: 
+umf.nb <- unmarkedFrameGMM( y = timeints, 
+  siteCovs = data.frame(siCovs, area),
   type = "removal",
-  piF)
+  numPrimary = 1 )
+
+
+nbm1 <- gmultmix(
+  #abundance
+  ~ 1 + tundra + lowshrub + sparseveg  + elev + offset(log(area)), 
+  ~1 ,
+  ~ 1 + julian + min_after_sun + wind + observer,
+    mixture = "NB",
+  umf.nb, engine="R" )
+
+summary(nbm1)
+
+#rerun the Poisson model for model comparison
+nbm2 <- gmultmix(
+  #abundance
+  ~ 1 + tundra + lowshrub + sparseveg  + elev + offset(log(area)), 
+  ~1 ,
+  ~ 1 + julian + min_after_sun + wind + observer,
+    mixture = "P",
+  umf.nb, engine="R" )
+
+summary(nbm2)
+
+
+
+#comparing output between three models
+confint( nbm1, type = "lambda" ) # now sparse vegetation is the only one where 95CI don't cross 0
+confint( nbm2, type = "lambda" )
+confint( fm.4, type = "state" )
 
 
 ```
