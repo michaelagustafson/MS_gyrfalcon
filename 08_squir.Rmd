@@ -559,7 +559,7 @@ tundra <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/tundra.tif")
 
 
 area.raster <- elev # CHANGE BACK TO ELEVATION ONCE GET RASTER LAYER
-values(area.raster) <- 400*400 # area of a grid pixel
+values(area.raster) <- 400*400/10000 # area of a grid pixel, divided by 10000 to standardize
 
 # find center/mean and std dev of scaled covariates to scale prediction surfaces above
 
@@ -656,7 +656,7 @@ sparseveg.pp <- seq( min( all.env2[,"sparseveg"]),max( all.env2[,"sparseveg"]),
 elev.std <- scale( elevation.pp )
 lowshrub.std <- scale( lowshrub.pp )
 sparseveg.std <- scale( sparseveg.pp )
-area.x = 400*400
+area.x = 400*400/10000
 
 #combine standardized predictors into a new dataframe to predict partial relationship
 # for abundance submodel:
