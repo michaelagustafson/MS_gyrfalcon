@@ -302,7 +302,7 @@ nbm3 <- gmultmix(
 #doesn't run 
 
 #comparing output between three models
-confint( nbm1, type = "lambda" )
+confint( nbm1, type = "lambda" ) # now sparse vegetation is the only one where 95CI don't cross 0
 confint( nbm2, type = "lambda" )
 confint( fm.10, type = "state" )
 
@@ -451,7 +451,7 @@ pred.surface <- stack(elev.s, lowshrub.s, sparseveg.s, tundra.s, area.raster, ju
 names(pred.surface) <- c("elev", "lowshrub", "sparseveg", "tundra", "area", "julian", "wind", "min_after_sun", "observer")
 
 
-ropt.prediction <- predict(fm.10, type='state', newdata=pred.surface)
+ropt.prediction <- predict(nbm1, type='lambda', newdata=pred.surface)
 
 ropt.freq <- freq(ropt.prediction, digits = 2)
 
@@ -520,6 +520,10 @@ for(i in 1:nrow(full.data)) {
 ```
 
 
+
+
+Partial Prediction Plots
+
 ```{r ppp}
 # Rock Ptarmigan PPP
 
@@ -537,14 +541,22 @@ lowshrub.pp <- seq( min( all.env2[,"lowshrub"]),max( all.env2[,"lowshrub"]),
 sparseveg.pp <- seq( min( all.env2[,"sparseveg"]),max( all.env2[,"sparseveg"]),
                    length.out = n )
 
+
+elev.pp <- seq( min( all.env2[,"elev"]),max(all.env2[,"elev"]),
+                length.out = n)
+
+
 #standardize predictors:
 lowshrub.std <- scale( lowshrub.pp )
 sparseveg.std <- scale( sparseveg.pp )
-area.x = 400*400
+elev.std <- scale( elev.pp)
+area.x = 400*400/10000
 
 ```
 
-```{r}
+Low shrub ppp
+
+```{r lsppp}
 ### Low shrub
 
 #combine standardized predictors into a new dataframe to predict partial relationship
@@ -552,7 +564,7 @@ area.x = 400*400
 abundData <- data.frame( tundra = 0, lowshrub = lowshrub.std, sparseveg = 0, elev = 0, area = area.x )
 
 #predict partial relationship:
-pred.lows <- predict( fm.10, type = "state", newdata = abundData, 
+pred.lows <- predict( nbm1, type = "lambda", newdata = abundData, 
                           appendData = TRUE )
 #view
 head( pred.lows ); dim( pred.lows )
@@ -564,20 +576,22 @@ r.lowsp <- cbind( pred.lows[,c("Predicted", "lower", "upper") ], lowshrub.pp ) %
   # define x and y values
   ggplot(., aes( x = lowshrub.pp, y = Predicted ) ) + 
   #choose preset look
-  ylim(0, 0.2) +
-  theme_bw( base_size = 50 ) +
+  ylim(0, 0.5) +
+  theme_classic( base_size = 15 ) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "Low shrub (%)", y = "Rock Ptarmigan \n relative abundance" ) +
+  labs( x = "Low shrub", y = "Rock Ptarmigan \n relative abundance" ) +
   # add band of confidence intervals
-  theme(text=element_text(size=60)) +
+  theme(text=element_text(size=25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, color = "grey" ) +
+               size = 1.5, alpha = 0.5, fill = "darkseagreen1" ) +
   # add mean line on top
-  geom_line( size = 2 ) 
+  geom_line( linewidth = 2, color = "darkgreen" ) 
 #view
 r.lowsp
-ggsave("RockXLow2.png", width = 7, height = 7,dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/ropt_low.png", dpi = 300)
 
 
 ```
@@ -590,7 +604,7 @@ ggsave("RockXLow2.png", width = 7, height = 7,dpi = 300)
 abundData <- data.frame( tundra = 0, lowshrub = 0, sparseveg = sparseveg.std, elev = 0, area = area.x )
 
 #predict partial relationship:
-pred.sv <- predict( fm.10, type = "state", newdata = abundData, 
+pred.sv <- predict( nbm1, type = "lambda", newdata = abundData, 
                           appendData = TRUE )
 #view
 head( pred.sv ); dim( pred.sv )
@@ -602,26 +616,67 @@ r.svp <- cbind( pred.sv[,c("Predicted", "lower", "upper") ], sparseveg.pp ) %>%
   # define x and y values
   ggplot(., aes( x = sparseveg.pp, y = Predicted ) ) + 
   #choose preset look
-  #ylim(0, 0.2) +
-  theme_bw( base_size = 50 ) +
+  ylim(0, 0.5) +
+  theme_classic( base_size = 15 ) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "Sparse veg (%)", y = "Rock Ptarmigan \n relative abundance" ) +
+  labs( x = "Sparse vegetation", y = "Rock Ptarmigan \n relative abundance" ) +
   # add band of confidence intervals
   #theme(axis.title.y=element_blank()) +
-  theme(text=element_text(size=60)) +
+  theme(text=element_text(size=25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, color = "grey" ) +
+               size = 1.5, alpha = 0.5, fill = "darkseagreen1" ) +
   # add mean line on top
-  geom_line( size = 2 ) 
+  geom_line( linewidth = 2, color = "darkgreen" ) 
 
 r.svp
 
-ggsave("RockXSparse2.png", width = 7, height = 7,dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/ropt_sparseveg.png", dpi = 300)
 
 
 
 ```
+Elevation
+
+```{r}
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+abundData <- data.frame( tundra = 0, lowshrub = 0, sparseveg = 0, elev = elev.std, area = area.x )
+
+#predict partial relationship:
+pred.lows <- predict( nbm1, type = "lambda", newdata = abundData, 
+                          appendData = TRUE )
+#view
+head( pred.lows ); dim( pred.lows )
+
+r.elevp <- cbind( pred.lows[,c("Predicted", "lower", "upper") ], elev.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = elev.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 0.5) +
+  theme_classic( base_size = 15 ) +
+  # turn x axis into percent scale
+  #scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  # add labels
+  labs( x = "Elevation (m)", y = "Rock Ptarmigan \n relative abundance" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=25)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 1.5, alpha = 0.5, fill = "darkseagreen1" ) +
+  # add mean line on top
+  geom_line( linewidth = 2, color = "darkgreen" ) 
+#view
+r.elevp
+
+ggsave("E:/gyrf_analysis/partial prediction plots/ropt_elev.png", dpi = 300)
+```
+
+
+
 
 ```{r}
 figure2 <- ggarrange(lowsp, svp,
