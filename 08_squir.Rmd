@@ -431,6 +431,20 @@ fm.4 <- readRDS(here("models/squirfm4_27oct22.rds"))
 ```
 
 
+NEGATIVE BINOMIAL MODEL
+```{r nb}
+# For the NB need to create an unmarkedFrameGMM and specify that it is removal
+
+squir.nb <- unmarkedFrameGMM(
+  # import time removal columns(counts):
+  y = timeints, 
+  siteCovs = data.frame(siCovs, area), #area is for offset for prediction surface
+  # define pifun type: 
+  type = "removal",
+  piF)
+
+
+```
 
 
 
@@ -631,24 +645,25 @@ head( pred.elev ); dim( pred.elev )
 s.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
   # define x and y values
   ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
+  ylim(0,0.4) +
   #choose preset look
   #ylim(0, 0.35) +
-  theme_bw( base_size = 50 ) +
+  theme_classic( base_size = 15) +
   # add labels
   labs( x = "Elevation (m)", y = "Arctic ground squirrel \n relative abundance") +
   # add band of confidence intervals
   #theme(axis.title.y=element_blank()) +
-  theme(text=element_text(size=60)) +
+  theme(text=element_text(size=25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, color = "grey" ) +
+               size = 1.5, alpha = 0.5, fill = "darksalmon" ) +
   # add mean line on top
-  geom_line( size = 2 )
+  geom_line( size = 2, color = "darkred" )
 #view
 s.elevp
 
 
-ggsave("SquirXElev2.png", width = 7.5, height = 7.5, dpi = 300)
+ggsave("partial prediction plots/squir_elev.png", dpi = 300)
 
 ```
 
@@ -671,22 +686,25 @@ head( pred.lows ); dim( pred.lows )
 s.lowsp <- cbind( pred.lows[,c("Predicted", "lower", "upper") ], lowshrub.pp ) %>%
   # define x and y values
   ggplot(., aes( x = lowshrub.pp, y = Predicted ) ) + 
+  ylim(0, 0.4) +
   #ylim(0, 0.35) +
   #choose preset look
-  theme_bw( base_size = 50 ) +
+  theme_classic( base_size = 15 ) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "Low shrub (%)", y = "Arctic ground squirrel \n relative abundance" ) +
+  labs( x = "Low shrub", y = "Arctic ground squirrel \n relative abundance" ) +
   # add band of confidence intervals
-  theme(text=element_text(size=60)) +
+  theme(text=element_text(size=25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, color = "grey" ) +
+               size = 1.5, alpha = 0.5, fill = "darksalmon" ) +
   # add mean line on top
-  geom_line( size = 2 )
+  geom_line( size = 2, color = "darkred" )
 #view
 s.lowsp
 
-ggsave("SquirXLow2.png", width = 7.5, height = 7.5, dpi = 300)
+ggsave("partial prediction plots/squir_low.png", dpi = 300)
 
 ```
 
@@ -709,22 +727,24 @@ s.svp <- cbind( pred.sv[,c("Predicted", "lower", "upper") ], sparseveg.pp ) %>%
   # define x and y values
   ggplot(., aes( x = sparseveg.pp, y = Predicted ) ) + 
   #choose preset look
- # ylim(0, 0.35) +
-  theme_bw( base_size = 50 ) +
+  ylim(0, 0.4) +
+  theme_classic( base_size = 15 ) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "Sparse veg (%)", y = "Arctic ground squirrel \n relative abundance") + 
+  labs( x = "Sparse vegetation", y = "Arctic ground squirrel \n relative abundance") + 
   # add band of confidence intervals
   #theme(axis.title.y=element_blank()) +
-  theme(text=element_text(size=60)) +
+  theme(text=element_text(size=25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, color = "grey" ) +
+               size = 1.5, alpha = 0.5, fill = "darksalmon" ) +
   # add mean line on top
-  geom_line( size = 2 )
+  geom_line( size = 2, color = "darkred" )
 #view
 s.svp
 
-ggsave("SquirXSparse3.png", width = 7.5, height = 7.5, dpi = 300)
+ggsave("partial prediction plots/squir_sparseveg.png", dpi = 300)
 
 
 
