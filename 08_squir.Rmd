@@ -381,30 +381,30 @@ ms2 <- fitList(
 (ms2sel <- modSel(ms2))
 ms2sel
 
-summary(fm0)
+#summary(fm0)
 
-summary(fm.1)
+#summary(fm.1)
 
-summary(fm.2)
+#summary(fm.2)
 
-summary(fm.3)
+#summary(fm.3)
 
 summary(fm.4)  ###**** tundra sparseveg lowshrub
 
 summary(fm.4.2)
 
-summary(fm.5)
+#summary(fm.5)
 
-summary(fm.6)
+#summary(fm.6)
 
 #summary(fm.7)
 
-summary(fm.8)
+#summary(fm.8)
 
-summary(fm.9)
+#summary(fm.9)
 
-summary(fm.11)
-summary(fm.44)
+#summary(fm.11)
+#summary(fm.44)
 
 library(modelsummary)
 library(broom.mixed)
@@ -413,24 +413,24 @@ library(ggstance)
 library(gtsummary)
 
 
-sq.coef <- as.data.frame(coef(nbm1))
-sq.coef2 <- as.data.frame(coef(fm.4))
-write.csv(sq.coef, here("model output/sqcoef.csv"))
-write.csv(sq.coef2, here("model output/sqcoef2.csv"))
+#sq.coef <- as.data.frame(coef(nbm1))
+#sq.coef2 <- as.data.frame(coef(fm.4))
+#write.csv(sq.coef, here("model output/sqcoef.csv"))
+#write.csv(sq.coef2, here("model output/sqcoef2.csv"))
 
 plogis(-3.01) # WIPT: 0.04697615
 plogis(-2.33) # ROPT: 0.08866866
 plogis(-3.92) # AGSQ: 0.01945508
 
 ?confint
-sq.state.confint <- as.data.frame(confint(fm.4, level = 0.95, type = "state"))
-sq.det.confint <- as.data.frame(confint(fm.4, level = 0.95, type = "det"))
+#sq.state.confint <- as.data.frame(confint(fm.4, level = 0.95, type = "state"))
+#sq.det.confint <- as.data.frame(confint(fm.4, level = 0.95, type = "det"))
 
-write.csv(sq.state.confint, here("model output/sqci_state.csv"))
-write.csv(sq.det.confint, here("model output/sqci_det.csv"))
+#write.csv(sq.state.confint, here("model output/sqci_state.csv"))
+#write.csv(sq.det.confint, here("model output/sqci_det.csv"))
 
 #saveRDS(fm.4, here("models/squirfm4_27oct22.rds"))
-fm.4 <- readRDS(here("models/squirfm4_27oct22.rds"))
+#fm.4 <- readRDS(here("models/squirfm4_27oct22.rds"))
 ```
 
 
@@ -600,18 +600,18 @@ names(pred.surface) <- c("elev", "lowshrub", "sparseveg", "tundra", "area", "jul
 
 
 
-sq.prediction <- predict(fm.4, type="state", newdata=pred.surface)
+sq.prediction <- predict(nbm1, type="lambda", newdata=pred.surface)
 
-ncell(sq.prediction) # 169556 cells in raster
-cellStats(sq.prediction, 'sum')
+#ncell(sq.prediction) # 169556 cells in raster
+#cellStats(sq.prediction, 'sum')
 
 
 
-squir.freq <- freq(sq.prediction, digits = 2)
+#squir.freq <- freq(sq.prediction, digits = 2)
 
-squir.freq1 <- as.data.frame(squir.freq[1])
+#squir.freq1 <- as.data.frame(squir.freq[1])
 
-write.csv(squir.freq1, here("output/squircellcounts.csv"))
+#write.csv(squir.freq1, here("output/squircellcounts.csv"))
 
 
 
@@ -663,7 +663,7 @@ area.x = 400*400/10000
 abundData <- data.frame( tundra = 0, lowshrub = 0, sparseveg = 0, elev = elev.std, area = area.x )
 
 #predict partial relationship:
-pred.elev <- predict( fm.4, type = "state", newdata = abundData, 
+pred.elev <- predict( nbm1, type = "lambda", newdata = abundData, 
                           appendData = TRUE )
 #view
 head( pred.elev ); dim( pred.elev )
@@ -674,7 +674,7 @@ head( pred.elev ); dim( pred.elev )
 s.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
   # define x and y values
   ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
-  ylim(0,0.4) +
+  ylim(0, 1) +
   #choose preset look
   #ylim(0, 0.35) +
   theme_classic( base_size = 15) +
@@ -704,7 +704,7 @@ ggsave("partial prediction plots/squir_elev.png", dpi = 300)
 abundData <- data.frame( tundra = 0, lowshrub = lowshrub.std, sparseveg = 0, elev = 0, area = area.x )
 
 #predict partial relationship:
-pred.lows <- predict( fm.4, type = "state", newdata = abundData, 
+pred.lows <- predict( nbm1, type = "lambda", newdata = abundData, 
                           appendData = TRUE )
 #view
 head( pred.lows ); dim( pred.lows )
@@ -715,7 +715,7 @@ head( pred.lows ); dim( pred.lows )
 s.lowsp <- cbind( pred.lows[,c("Predicted", "lower", "upper") ], lowshrub.pp ) %>%
   # define x and y values
   ggplot(., aes( x = lowshrub.pp, y = Predicted ) ) + 
-  ylim(0, 0.4) +
+  ylim(0, 1) +
   #ylim(0, 0.35) +
   #choose preset look
   theme_classic( base_size = 15 ) +
@@ -744,7 +744,7 @@ ggsave("partial prediction plots/squir_low.png", dpi = 300)
 abundData <- data.frame( tundra = 0, lowshrub = 0, sparseveg = sparseveg.std, elev = 0, area = area.x )
 
 #predict partial relationship:
-pred.sv <- predict( fm.4, type = "state", newdata = abundData, 
+pred.sv <- predict( nbm1, type = "lambda", newdata = abundData, 
                           appendData = TRUE )
 #view
 head( pred.sv ); dim( pred.sv )
@@ -756,7 +756,7 @@ s.svp <- cbind( pred.sv[,c("Predicted", "lower", "upper") ], sparseveg.pp ) %>%
   # define x and y values
   ggplot(., aes( x = sparseveg.pp, y = Predicted ) ) + 
   #choose preset look
-  ylim(0, 0.4) +
+  ylim(0, 1) +
   theme_classic( base_size = 15 ) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
