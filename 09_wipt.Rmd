@@ -417,7 +417,7 @@ elev.std <- scale( elevation.pp )
 allshrub.std <- scale( allshrub.pp )
 tundra.std <- scale( tundra.pp )
 tussock.std <- scale( tussock.pp )
-area.x = 400*400/10000
+area.x = pi*400*400/10000
 
 
 ### ELEVATION
@@ -442,7 +442,7 @@ w.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) 
   theme_classic( base_size = 15) +
   # add labels
   ylim(0, 13) +
-  labs( x = "Elevation (m)", y = "Willow Ptarmigan \n relative abundance" ) +
+  labs( x = "Elevation (m)", y = "Willow Ptarmigan \n density" ) +
   # add band of confidence intervals
   theme(axis.title.y=element_blank()) +
   theme(text=element_text(size=25)) +
@@ -453,7 +453,7 @@ w.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) 
   geom_line( size = 2, color = "blue" )
 #view
 w.elevp
-#ggsave("partial prediction plots/wipt_elev.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/wipt_elev.png", dpi = 300)
 
 ```
 
@@ -479,10 +479,10 @@ w.tussp <- cbind( pred.tuss[,c("Predicted", "lower", "upper") ], tussock.pp ) %>
   #choose preset look
   theme_classic( base_size = 15) +
   # add labels
-  ylim(0, 15) +
+  ylim(0, 45) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
-  labs( x = "Tussock", y = "Willow Ptarmigan \n relative abundance" ) +
+  labs( x = "Tussock", y = "Willow Ptarmigan \n density" ) +
   # add band of confidence intervals
   theme(text=element_text(size=25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
@@ -516,7 +516,7 @@ w.tundp <- cbind( pred.tun[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   # define x and y values
   ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
   #choose preset look
-  ylim(0, 15) +
+  ylim(0, 45) +
   theme_classic( base_size = 15) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
@@ -555,7 +555,7 @@ w.allsp <- cbind( pred.alls[,c("Predicted", "lower", "upper") ], allshrub.pp ) %
   # define x and y values
   ggplot(., aes( x = allshrub.pp, y = Predicted ) ) + 
   #choose preset look
-  ylim(0, 15) +
+  ylim(0, 45) +
   theme_classic( base_size = 15 ) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
