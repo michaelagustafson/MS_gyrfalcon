@@ -482,7 +482,7 @@ w.tussp <- cbind( pred.tuss[,c("Predicted", "lower", "upper") ], tussock.pp ) %>
   ylim(0, 45) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
-  labs( x = "Tussock", y = "Willow Ptarmigan \n density" ) +
+  labs( x = "Tussock", y = "Willow Ptarmigan density" ) +
   # add band of confidence intervals
   theme(text=element_text(size=25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
@@ -521,7 +521,7 @@ w.tundp <- cbind( pred.tun[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "Tundra", y = "Willow Ptarmigan \n relative abundance" ) +
+  labs( x = "Tundra", y = "Willow Ptarmigan density" ) +
   # add band of confidence intervals
   theme(text=element_text(size=25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
@@ -560,7 +560,7 @@ w.allsp <- cbind( pred.alls[,c("Predicted", "lower", "upper") ], allshrub.pp ) %
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "All shrub", y = "Willow Ptarmigan \n relative abundance" ) +
+  labs( x = "All shrub", y = "Willow Ptarmigan density" ) +
   # add band of confidence intervals
   theme(text=element_text(size= 25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
