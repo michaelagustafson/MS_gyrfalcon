@@ -656,7 +656,7 @@ sparseveg.pp <- seq( min( all.env2[,"sparseveg"]),max( all.env2[,"sparseveg"]),
 elev.std <- scale( elevation.pp )
 lowshrub.std <- scale( lowshrub.pp )
 sparseveg.std <- scale( sparseveg.pp )
-area.x = 400*400/10000
+area.x = pi*400*400/10000
 
 #combine standardized predictors into a new dataframe to predict partial relationship
 # for abundance submodel:
@@ -756,12 +756,12 @@ s.svp <- cbind( pred.sv[,c("Predicted", "lower", "upper") ], sparseveg.pp ) %>%
   # define x and y values
   ggplot(., aes( x = sparseveg.pp, y = Predicted ) ) + 
   #choose preset look
-  ylim(0, 1) +
+  ylim(0, 3) +
   theme_classic( base_size = 15 ) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "Sparse vegetation", y = "Arctic ground squirrel \n relative abundance") + 
+  labs( x = "Sparse vegetation", y = "Arctic ground squirrel density") + 
   # add band of confidence intervals
   #theme(axis.title.y=element_blank()) +
   theme(text=element_text(size=25)) +
