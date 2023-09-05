@@ -183,7 +183,7 @@ a7
 ## TIME-REMOVAL MODEL
 WIPT sample size: 516 individuals counted
 ```{r trframe}
-all.env.scaled2 <- read.csv(here("output/all.env.scaled_22Aug22.csv"))
+#all.env.scaled2 <- read.csv(here("output/all.env.scaled_22Aug22.csv"))
 all.env.scaled2 <- all.env.scaled2[,-c(1)]
 
 wipt.env.join <- left_join(wipt.wide, all.env.scaled2)
@@ -424,35 +424,35 @@ area.x = 400*400/10000
 
 #combine standardized predictors into a new dataframe to predict partial relationship
 # for abundance submodel:
-#abundData <- data.frame( tundra = 0, tussock = 0, allshrub = 0, elev = elev.std, area = area.x )
+abundData <- data.frame( tundra = 0, tussock = 0, allshrub = 0, elev = elev.std, area = area.x )
 
 #predict partial relationship:
-#pred.elev <- predict( fm.2, type = "state", newdata = abundData, 
-                          #appendData = TRUE )
+pred.elev <- predict( nbm1, type = "lambda", newdata = abundData, 
+                          appendData = TRUE )
 #view
-#head( pred.elev ); dim( pred.elev )
+head( pred.elev ); dim( pred.elev )
 
 
 ### plot
 
-#w.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
+w.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
   # define x and y values
-  #ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
+  ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
   #choose preset look
-  #theme_bw( base_size = 15) +
+  theme_classic( base_size = 15) +
   # add labels
-  #ylim(0, 13) +
-  #labs( x = "Elevation (m)", y = "Willow Ptarmigan \n relative abundance" ) +
+  ylim(0, 13) +
+  labs( x = "Elevation (m)", y = "Willow Ptarmigan \n relative abundance" ) +
   # add band of confidence intervals
-  #theme(axis.title.y=element_blank()) +
-  #theme(text=element_text(size=25)) +
-  #geom_smooth( aes(ymin = lower, ymax = upper ), 
-               #stat = "identity",
-               #size = 1.5, alpha = 0.5, fill = "lightblue" ) +
+  theme(axis.title.y=element_blank()) +
+  theme(text=element_text(size=25)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 1.5, alpha = 0.5, fill = "lightblue" ) +
   # add mean line on top
-  #geom_line( size = 2, color = "blue" )
+  geom_line( size = 2, color = "blue" )
 #view
-#w.elevp
+w.elevp
 #ggsave("partial prediction plots/wipt_elev.png", dpi = 300)
 
 ```
@@ -477,9 +477,9 @@ w.tussp <- cbind( pred.tuss[,c("Predicted", "lower", "upper") ], tussock.pp ) %>
   # define x and y values
   ggplot(., aes( x = tussock.pp, y = Predicted ) ) + 
   #choose preset look
-  theme_bw( base_size = 15) +
+  theme_classic( base_size = 15) +
   # add labels
-  ylim(0, 7) +
+  ylim(0, 15) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   labs( x = "Tussock", y = "Willow Ptarmigan \n relative abundance" ) +
@@ -516,8 +516,8 @@ w.tundp <- cbind( pred.tun[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   # define x and y values
   ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
   #choose preset look
-  ylim(0, 14) +
-  theme_bw( base_size = 15) +
+  ylim(0, 15) +
+  theme_classic( base_size = 15) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
@@ -531,7 +531,7 @@ w.tundp <- cbind( pred.tun[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   geom_line( size = 2, color = "blue")
 #view
 w.tundp
-ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tundra.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tundra2.png", dpi = 300)
 
 ```
 
@@ -555,8 +555,8 @@ w.allsp <- cbind( pred.alls[,c("Predicted", "lower", "upper") ], allshrub.pp ) %
   # define x and y values
   ggplot(., aes( x = allshrub.pp, y = Predicted ) ) + 
   #choose preset look
-  ylim(0, 7) +
-  theme_bw( base_size = 15 ) +
+  ylim(0, 15) +
+  theme_classic( base_size = 15 ) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
@@ -572,7 +572,7 @@ w.allsp <- cbind( pred.alls[,c("Predicted", "lower", "upper") ], allshrub.pp ) %
 w.allsp
 
 
-ggsave("E:/gyrf_analysis/partial prediction plots/wipt_allshrub.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/wipt_allshrub2.png", dpi = 300)
 
 ```
 
