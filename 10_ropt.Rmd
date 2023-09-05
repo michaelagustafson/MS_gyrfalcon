@@ -453,11 +453,11 @@ names(pred.surface) <- c("elev", "lowshrub", "sparseveg", "tundra", "area", "jul
 
 ropt.prediction <- predict(nbm1, type='lambda', newdata=pred.surface)
 
-ropt.freq <- freq(ropt.prediction, digits = 2)
+#ropt.freq <- freq(ropt.prediction, digits = 2)
 
-ropt.freq1 <- as.data.frame(ropt.freq[1])
+#ropt.freq1 <- as.data.frame(ropt.freq[1])
 
-write.csv(ropt.freq1, here("output/roptcellcounts.csv"))
+#write.csv(ropt.freq1, here("output/roptcellcounts.csv"))
 
 
 writeRaster(ropt.prediction, filename = names(ropt.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
