@@ -603,7 +603,7 @@ names(pred.surface) <- c("elev", "lowshrub", "sparseveg", "tundra", "area", "jul
 sq.prediction <- predict(nbm1, type="lambda", newdata=pred.surface)
 
 #ncell(sq.prediction) # 169556 cells in raster
-#cellStats(sq.prediction, 'sum')
+cellStats(sq.prediction, 'sum')
 
 
 

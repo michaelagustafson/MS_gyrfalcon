@@ -473,7 +473,7 @@ writeRaster(ropt.prediction, filename = names(ropt.prediction), bylayer = TRUE, 
 
 plot(ropt.prediction, axes=FALSE, col=terrain.colors(100))
 
-sum_raster_cells <-cellStats(ropt.prediction, 'sum')
+cellStats(ropt.prediction, 'sum')
 sum_raster_cells
 
 
