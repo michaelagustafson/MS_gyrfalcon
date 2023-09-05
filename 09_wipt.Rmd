@@ -197,7 +197,7 @@ colnames(wipt.env.join)
 
 timeints <- wipt.env.join[,c(2:6)]
 siCovs <- wipt.env.join[,c(7:32)]
-area <- pi*400^2
+area <- pi*400^2/10000
 
 wiptFrame2 <- unmarkedFrameMPois(
   # import time removal columns(counts):
@@ -206,6 +206,12 @@ wiptFrame2 <- unmarkedFrameMPois(
   # define pifun type: 
   type = "removal" )
 # fit models: multinomPois order of formulas: detection, abundance
+
+#creating dataframe for negative binomial model 
+umf.nb <- unmarkedFrameGMM( y = timeints, 
+  siteCovs = data.frame(siCovs, area),
+  type = "removal",
+  numPrimary = 1 )
 
 ```
 
@@ -219,6 +225,34 @@ fm.2 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundr
 #fm.6 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + shrub + elev + offset(log(area)), data = wiptFrame2)
 
 #fm.7 <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + allshrub + elev + offset(log(area)), data = wiptFrame2)
+
+#negative binomial and ZIP versions
+
+nbm1 <- gmultmix(
+  #abundance
+  ~ 1 + tundra + tussock + allshrub + elev + offset(log(area)), 
+  ~1 ,
+  ~ 1 + julian + min_after_sun + wind + observer,
+    mixture = "NB",
+  umf.nb, engine="R" )
+
+summary(nbm1)
+
+#rerun the Poisson model for model comparison
+nbm2 <- gmultmix(
+  #abundance
+  ~ 1 + tundra + tussock + allshrub + elev + offset(log(area)), 
+  ~1 ,
+  ~ 1 + julian + min_after_sun + wind + observer,
+    mixture = "P",
+  umf.nb, engine="R" )
+
+summary(nbm2)
+
+confint(nbm1, type = "lambda")
+confint(nbm2, type = "lambda")
+confint(fm.2, type = "state")
+
 
 ms2 <- fitList(
   "lam(.)p(.)" = fm0,
@@ -290,7 +324,7 @@ allshrub = sum(tallshrub,openshrub,lowshrub,na.rm=TRUE)
 
 
 area.raster <- elev 
-values(area.raster) <- 400*400 # area of a grid pixel
+values(area.raster) <- 400*400/10000 # area of a grid pixel
 
 # find center/mean and std dev of scaled covariates to scale prediction surfaces above
 ### NEED TO FIND CENTER AND STD DEV FOR SCALED allshrub###
@@ -322,15 +356,15 @@ names(pred.surface) <- c("tundra", "tussock", "allshrub", "elev", "area", "julia
 
 
 
-wipt.prediction <- predict(fm.2, type="state", newdata=pred.surface)
+wipt.prediction <- predict(nbm1, type="lambda", newdata=pred.surface)
 
-ncell(wipt.prediction)
+#ncell(wipt.prediction)
 
-wipt.freq <- freq(wipt.prediction, digits = 2)
+#wipt.freq <- freq(wipt.prediction, digits = 2)
 
-wipt.freq1 <- as.data.frame(wipt.freq[1])
+#wipt.freq1 <- as.data.frame(wipt.freq[1])
 
-write.csv(wipt.freq1, here("output/wiptcellcounts.csv"))
+#write.csv(wipt.freq1, here("model output/wiptcellcounts.csv"))
 
 writeRaster(wipt.prediction, filename = names(wipt.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
 ```
@@ -383,43 +417,43 @@ elev.std <- scale( elevation.pp )
 allshrub.std <- scale( allshrub.pp )
 tundra.std <- scale( tundra.pp )
 tussock.std <- scale( tussock.pp )
-area.x = 400*400
+area.x = 400*400/10000
 
 
 ### ELEVATION
 
 #combine standardized predictors into a new dataframe to predict partial relationship
 # for abundance submodel:
-abundData <- data.frame( tundra = 0, tussock = 0, allshrub = 0, elev = elev.std, area = area.x )
+#abundData <- data.frame( tundra = 0, tussock = 0, allshrub = 0, elev = elev.std, area = area.x )
 
 #predict partial relationship:
-pred.elev <- predict( fm.2, type = "state", newdata = abundData, 
-                          appendData = TRUE )
+#pred.elev <- predict( fm.2, type = "state", newdata = abundData, 
+                          #appendData = TRUE )
 #view
-head( pred.elev ); dim( pred.elev )
+#head( pred.elev ); dim( pred.elev )
 
 
 ### plot
 
-w.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
+#w.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
   # define x and y values
-  ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
+  #ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
   #choose preset look
-  theme_bw( base_size = 15) +
+  #theme_bw( base_size = 15) +
   # add labels
-  ylim(0, 13) +
-  labs( x = "Elevation (m)", y = "Willow Ptarmigan \n relative abundance" ) +
+  #ylim(0, 13) +
+  #labs( x = "Elevation (m)", y = "Willow Ptarmigan \n relative abundance" ) +
   # add band of confidence intervals
   #theme(axis.title.y=element_blank()) +
-  theme(text=element_text(size=25)) +
-  geom_smooth( aes(ymin = lower, ymax = upper ), 
-               stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue" ) +
+  #theme(text=element_text(size=25)) +
+  #geom_smooth( aes(ymin = lower, ymax = upper ), 
+               #stat = "identity",
+               #size = 1.5, alpha = 0.5, fill = "lightblue" ) +
   # add mean line on top
-  geom_line( size = 2, color = "blue" )
+  #geom_line( size = 2, color = "blue" )
 #view
-w.elevp
-ggsave("partial prediction plots/wipt_elev.png", dpi = 300)
+#w.elevp
+#ggsave("partial prediction plots/wipt_elev.png", dpi = 300)
 
 ```
 
@@ -431,7 +465,7 @@ ggsave("partial prediction plots/wipt_elev.png", dpi = 300)
 abundData <- data.frame( tundra = 0, tussock = tussock.std, allshrub = 0, elev = 0, area = area.x )
 
 #predict partial relationship:
-pred.tuss <- predict( fm.2, type = "state", newdata = abundData, 
+pred.tuss <- predict( nbm1, type = "lambda", newdata = abundData, 
                           appendData = TRUE )
 #view
 head( pred.tuss ); dim( pred.tuss )
@@ -445,7 +479,7 @@ w.tussp <- cbind( pred.tuss[,c("Predicted", "lower", "upper") ], tussock.pp ) %>
   #choose preset look
   theme_bw( base_size = 15) +
   # add labels
-  ylim(0, 13) +
+  ylim(0, 7) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   labs( x = "Tussock", y = "Willow Ptarmigan \n relative abundance" ) +
@@ -458,7 +492,7 @@ w.tussp <- cbind( pred.tuss[,c("Predicted", "lower", "upper") ], tussock.pp ) %>
   geom_line( size = 2, color = "blue" )
 #view
 w.tussp
-ggsave("partial prediction plots/wipt_tussock.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tussock.png", dpi = 300)
 
 ```
 
@@ -470,7 +504,7 @@ ggsave("partial prediction plots/wipt_tussock.png", dpi = 300)
 abundData <- data.frame( tundra = tundra.std, tussock = 0, allshrub = 0, elev = 0, area = area.x )
 
 #predict partial relationship:
-pred.tun <- predict( fm.2, type = "state", newdata = abundData, 
+pred.tun <- predict( nbm1, type = "lambda", newdata = abundData, 
                           appendData = TRUE )
 #view
 head( pred.tun ); dim( pred.tun )
@@ -482,7 +516,7 @@ w.tundp <- cbind( pred.tun[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   # define x and y values
   ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
   #choose preset look
-  ylim(0, 13) +
+  ylim(0, 14) +
   theme_bw( base_size = 15) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
@@ -497,7 +531,7 @@ w.tundp <- cbind( pred.tun[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   geom_line( size = 2, color = "blue")
 #view
 w.tundp
-ggsave("partial prediction plots/wipt_tundra.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tundra.png", dpi = 300)
 
 ```
 
@@ -509,7 +543,7 @@ ggsave("partial prediction plots/wipt_tundra.png", dpi = 300)
 abundData <- data.frame( tundra = 0, tussock = 0, allshrub = allshrub.std, elev = 0, area = area.x )
 
 #predict partial relationship:
-pred.alls <- predict( fm.2, type = "state", newdata = abundData, 
+pred.alls <- predict( nbm1, type = "lambda", newdata = abundData, 
                           appendData = TRUE )
 #view
 head( pred.alls ); dim( pred.alls )
@@ -521,7 +555,7 @@ w.allsp <- cbind( pred.alls[,c("Predicted", "lower", "upper") ], allshrub.pp ) %
   # define x and y values
   ggplot(., aes( x = allshrub.pp, y = Predicted ) ) + 
   #choose preset look
-  ylim(0, 13) +
+  ylim(0, 7) +
   theme_bw( base_size = 15 ) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
@@ -538,7 +572,7 @@ w.allsp <- cbind( pred.alls[,c("Predicted", "lower", "upper") ], allshrub.pp ) %
 w.allsp
 
 
-ggsave("partial prediction plots/wipt_allshrub.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/wipt_allshrub.png", dpi = 300)
 
 ```
 
