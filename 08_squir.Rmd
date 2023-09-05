@@ -692,7 +692,7 @@ s.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) 
 s.elevp
 
 
-ggsave("partial prediction plots/squir_elev.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/squir_elev.png", dpi = 300)
 
 ```
 
@@ -733,7 +733,7 @@ s.lowsp <- cbind( pred.lows[,c("Predicted", "lower", "upper") ], lowshrub.pp ) %
 #view
 s.lowsp
 
-ggsave("partial prediction plots/squir_low.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/squir_low.png", dpi = 300)
 
 ```
 
@@ -773,7 +773,7 @@ s.svp <- cbind( pred.sv[,c("Predicted", "lower", "upper") ], sparseveg.pp ) %>%
 #view
 s.svp
 
-ggsave("partial prediction plots/squir_sparseveg.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/squir_sparseveg.png", dpi = 300)
 
 
 
