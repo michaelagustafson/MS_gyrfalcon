@@ -794,3 +794,202 @@ save.image(here("08_squir_workspace.RData"))
 ```
 
 
+
+# Partial Prediction Plots for detection covariates
+
+Observer
+
+```{r dppp}
+# For detection parameters: julian date, wind spd, min after sun, observer
+
+# Estimate partial prediction plots for predictors with 95% CIs not overlapping zero:
+# Start by creating our datasets to predict over
+
+# how many values do we use:
+n <- 100
+
+
+# Use the observed values to define our range:
+julian.pp <- seq( min( all.env2[,"julian"]),max(all.env2[,"julian"]),
+                   length.out = n )
+
+wind.pp <- seq( min( all.env2[,"wind"]),max( all.env2[,"wind"]),
+                   length.out = n )
+
+minsun.pp <- seq( min( all.env2[,"min_after_sun"]),max( all.env2[,"min_after_sun"]),
+                   length.out = n )
+
+
+  
+### Tutorial Code:
+#combine standardized predictor into a new dataframe to predict partial relationship
+# with sagebrush. We set observer effect as tech 1
+#sageDet <- data.frame( obsv = factor( "tech.1", levels = c("tech.1", "tech.2",
+                  #"tech.3", "tech.4") ), sagebrush = sage.std )
+  
+#now for observer effects:
+#obsvDet <- data.frame( obsv = factor( c("tech.1", "tech.2","tech.3", "tech.4"), 
+                      # levels = c("tech.1", "tech.2","tech.3", "tech.4") ), 
+                     # sagebrush = 0 )
+#predict partial relationship between observer effects and detection
+#pred.det.obsv <- predict( fm.closed, type = "det", newdata = obsvDet, 
+                          #appendData = TRUE )
+  
+
+#observer.pp <- seq( min( all.env2[,"min_after_sun"]),max( all.env2[,"min_after_sun"]),
+                   #length.out = n ) # how to do partial prediction plot with factor
+
+#standardize predictors:
+jul.std <- scale( julian.pp )
+wind.std <- scale( wind.pp )
+minsun.std <- scale( minsun.pp )
+#area.x = pi*400*400/10000
+
+# Observer effect
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+detDataobs <- data.frame( observer = factor( c("DS", "KW","MG"), levels = c("DS", "KW","MG") ),
+                       julian = 0, 
+                       wind = 0, 
+                       min_after_sun = 0)
+
+
+#predict partial relationship:
+pred.obs <- predict( nbm1, type = "det", newdata = detDataobs, 
+                          appendData = TRUE )
+
+
+
+obsvp.det <- pred.obs %>%
+  # define x and y values
+  ggplot(., aes( x = observer, y = Predicted, color = observer ) ) + 
+  #choose preset look
+  theme_classic( base_size = 15 ) +
+  #remove legend
+  theme( legend.position = "none" ) +
+  # add labels
+  labs( x = "Observer", y = "Predicted detection" ) +
+  #add mean detection for each observer
+  geom_point( size = 4 ) +
+  # add confidence intervals
+  geom_errorbar( aes(ymin = lower, ymax = upper ), 
+               size = 1.5, width = 0.3 ) 
+#view
+obsvp.det
+
+```
+Julian
+
+```{r detjulp}
+
+detDatajul <- data.frame( observer = factor("DS", levels = c("DS", "KW","MG") ),
+                       julian = jul.std, 
+                       wind = 0, 
+                       min_after_sun = 0)
+
+
+#predict partial relationship:
+pred.jul <- predict( nbm1, type = "det", newdata = detDatajul, 
+                          appendData = TRUE )
+
+julp.det <- cbind( pred.jul[,c("Predicted", "lower", "upper") ], julian.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = julian.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 15 ) +
+  # add labels
+  labs( x = "Julian date", y = "Predicted detection" ) +
+  # add band of confidence intervals
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 1.5, alpha = 0.5, fill = "lightsalmon" ) +
+  # add mean line on top
+  geom_line( size = 2, color = "darkred" ) 
+#view
+julp.det
+
+
+
+
+
+```
+Wind speed
+
+```{r detwindspp}
+detDatawind <- data.frame( observer = factor("DS", levels = c("DS", "KW","MG") ),
+                       julian = 0, 
+                       wind = wind.std, 
+                       min_after_sun = 0)
+
+
+#predict partial relationship:
+pred.wind <- predict( nbm1, type = "det", newdata = detDatawind, 
+                          appendData = TRUE )
+
+windp.det <- cbind( pred.wind[,c("Predicted", "lower", "upper") ], wind.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = wind.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 15 ) +
+  # add labels
+  labs( x = "Wind speed (mph)", y = "Predicted detection" ) +
+  # add band of confidence intervals
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 1.5, alpha = 0.5, fill = "lightsalmon" ) +
+  # add mean line on top
+  geom_line( size = 2, color = "darkred" ) 
+#view
+windp.det
+
+
+
+```
+
+Minutes after sunrise
+
+```{r minaftersunp}
+
+detDatasun <- data.frame( observer = factor("DS", levels = c("DS", "KW","MG") ),
+                       julian = 0, 
+                       wind = 0, 
+                       min_after_sun = minsun.std)
+
+
+#predict partial relationship:
+pred.sun <- predict( nbm1, type = "det", newdata = detDatasun, 
+                          appendData = TRUE )
+
+sunp.det <- cbind( pred.sun[,c("Predicted", "lower", "upper") ], minsun.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = minsun.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 15 ) +
+  # add labels
+  labs( x = "Minutes after sunrise", y = "Predicted detection" ) +
+  # add band of confidence intervals
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 1.5, alpha = 0.5, fill = "lightsalmon" ) +
+  # add mean line on top
+  geom_line( size = 2, color = "darkred" ) 
+#view
+sunp.det
+
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
