@@ -873,10 +873,14 @@ obsvp.det <- pred.obs %>%
   geom_point( size = 4 ) +
   # add confidence intervals
   geom_errorbar( aes(ymin = lower, ymax = upper ), 
-               size = 1.5, width = 0.3 ) 
+               size = 1.5, width = 0.3 ) +
+  scale_color_manual(values=c('tomato','brown3','firebrick')) +
+  ylim(0,1.0)
 #view
 obsvp.det
 
+
+ggsave("E:/gyrf_analysis/detection partial plots/squir_observer.png", dpi = 300)
 ```
 Julian
 
@@ -904,13 +908,14 @@ julp.det <- cbind( pred.jul[,c("Predicted", "lower", "upper") ], julian.pp ) %>%
                stat = "identity",
                size = 1.5, alpha = 0.5, fill = "lightsalmon" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkred" ) 
+  geom_line( size = 2, color = "darkred" ) +
+  ylim(0,1.0)
 #view
 julp.det
 
 
 
-
+ggsave("E:/gyrf_analysis/detection partial plots/squir_julian.png", dpi = 300)
 
 ```
 Wind speed
@@ -938,11 +943,12 @@ windp.det <- cbind( pred.wind[,c("Predicted", "lower", "upper") ], wind.pp ) %>%
                stat = "identity",
                size = 1.5, alpha = 0.5, fill = "lightsalmon" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkred" ) 
+  geom_line( size = 2, color = "darkred" ) +
+  ylim(0,1.0)
 #view
 windp.det
 
-
+ggsave("E:/gyrf_analysis/detection partial plots/squir_wind.png", dpi = 300)
 
 ```
 
@@ -972,14 +978,13 @@ sunp.det <- cbind( pred.sun[,c("Predicted", "lower", "upper") ], minsun.pp ) %>%
                stat = "identity",
                size = 1.5, alpha = 0.5, fill = "lightsalmon" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkred" ) 
+  geom_line( size = 2, color = "darkred" ) +
+  ylim(0,1.0)
 #view
 sunp.det
 
 
-
-
-
+ggsave("E:/gyrf_analysis/detection partial plots/squir_minsun.png", dpi = 300)
 
 ```
 
