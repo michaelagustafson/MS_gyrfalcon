@@ -448,9 +448,9 @@ w.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) 
   theme(text=element_text(size=25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue" ) +
+               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "blue" )
+  geom_line( size = 2, color = "darkblue" )
 #view
 w.elevp
 ggsave("E:/gyrf_analysis/partial prediction plots/wipt_elev.png", dpi = 300)
@@ -487,9 +487,9 @@ w.tussp <- cbind( pred.tuss[,c("Predicted", "lower", "upper") ], tussock.pp ) %>
   theme(text=element_text(size=25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue" ) +
+               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "blue" )
+  geom_line( size = 2, color = "darkblue" )
 #view
 w.tussp
 ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tussock.png", dpi = 300)
@@ -526,9 +526,9 @@ w.tundp <- cbind( pred.tun[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   theme(text=element_text(size=25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue" ) +
+               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "blue")
+  geom_line( size = 2, color = "darkblue")
 #view
 w.tundp
 ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tundra2.png", dpi = 300)
@@ -565,9 +565,9 @@ w.allsp <- cbind( pred.alls[,c("Predicted", "lower", "upper") ], allshrub.pp ) %
   theme(text=element_text(size= 25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue" ) +
+               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "blue" )
+  geom_line( size = 2, color = "darkblue" )
 #view
 w.allsp
 
@@ -715,9 +715,9 @@ julp.det <- cbind( pred.jul[,c("Predicted", "lower", "upper") ], julian.pp ) %>%
   # add band of confidence intervals
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue" ) +
+               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "blue" ) +
+  geom_line( size = 2, color = "darkblue" ) +
   ylim(0,1.0)
 #view
 julp.det
@@ -750,9 +750,9 @@ windp.det <- cbind( pred.wind[,c("Predicted", "lower", "upper") ], wind.pp ) %>%
   # add band of confidence intervals
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue" ) +
+               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "blue" ) +
+  geom_line( size = 2, color = "darkblue" ) +
   ylim(0,1.0)
 #view
 windp.det
@@ -785,9 +785,9 @@ sunp.det <- cbind( pred.sun[,c("Predicted", "lower", "upper") ], minsun.pp ) %>%
   # add band of confidence intervals
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue" ) +
+               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "blue" ) +
+  geom_line( size = 2, color = "darkblue" ) +
   ylim(0,1.0)
 #view
 sunp.det
