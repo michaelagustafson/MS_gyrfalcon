@@ -270,6 +270,7 @@ confint( ocm2, type = "state" )
 confint( ocm2, type = "det" )
 #negative binomial and ZIP versions
 
+
 nbm1 <- gmultmix(
   #abundance
   ~ 1 + tundra + lowshrub + sparseveg  + elev + offset(log(area)), 
@@ -339,6 +340,7 @@ summary(fm.11)
 
 ### nonsignificant cat variables
 ## hear? try removing and check other values maybe observer? b/c of std error
+
 
 ```
 
