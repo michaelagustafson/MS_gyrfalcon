@@ -493,10 +493,13 @@ set.seed(2022)
 #gof.null
 
 #(gof.fm <- parboot(object = fm.3, statistic = fitstats2, nsim = 1000, report = 1))
-gof.fm
+#gof.fm
 
-(gof.fm4 <- parboot(object = fm.4, statistic = fitstats2, nsim = 1000, report = 1))
-gof.fm4
+#(gof.fm4 <- parboot(object = fm.4, statistic = fitstats2, nsim = 1000, report = 1))
+#gof.fm4
+
+#(gof.nb1 <- parboot(object = nbm1, statistic = fitstats2, nsim = 1000, report = 1))
+#gof.nb1
 
 #chat3 <- gof.fm@t0[2]/mean(gof.fm@t.star[,2])
 #chat3 ### 0.687
@@ -537,6 +540,37 @@ print(gof.fm.4)
 # compute c-hat
 chat.4 <- gof.fm.4@t0[2]/mean(gof.fm.4@t.star[,2])
 chat.4 # 0.8144976 on 29 Nov 2022
+
+
+
+# NB GOF
+
+fitstats.nb1 <- function(nbm1) {
+  observed <- getY(nbm1@data)
+  expected <- fitted(nbm1)
+  resids <- residuals(nbm1)
+  n.obs <- apply(observed,1,sum,na.rm=TRUE)
+  n.pred <- apply(expected,1,sum,na.rm=TRUE)
+  sse <- sum(resids^2, na.rm=TRUE)
+  chisq <- sum((observed - expected)^2 / expected, na.rm=TRUE)
+  freeTuke <- sum((sqrt(observed) - sqrt(expected))^2, na.rm=TRUE)
+  freeTuke.n <- sum((sqrt(n.obs)-sqrt(n.pred))^2, na.rm=TRUE)
+  sse.n <- sum( (n.obs-n.pred)^2, na.rm=TRUE)
+  chisq.n <- sum((n.obs-n.pred)^2/expected, na.rm=TRUE)
+  
+  out <- c(SSE=sse, Chisq=chisq, freemanTukey=freeTuke, SSE.n=sse.n, Chisq.n=chisq.n, freemanTukey.n=freeTuke.n)
+  return(out)
+}
+
+(gof.nb1 <- parboot(nbm1, fitstats.nb1, nsim = 1000, report = 1))
+
+#print(gof.fm.null)
+print(gof.nb1)
+
+# compute c-hat
+chat.4 <- gof.fm.4@t0[2]/mean(gof.fm.4@t.star[,2])
+chat.4 # 0.8144976 on 29 Nov 2022
+
 
 
 
