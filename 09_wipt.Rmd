@@ -259,6 +259,9 @@ nbm3 <- gmultmix(
 
 summary(nbm3)
 
+gof.boot.3 <- Nmix.gof.test( nbm3, nsim = 100, print.table = TRUE )
+
+
 confint(nbm1, type = "lambda")
 confint(nbm2, type = "lambda")
 confint(fm.2, type = "state")
