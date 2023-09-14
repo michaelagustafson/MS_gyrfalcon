@@ -249,6 +249,16 @@ nbm2 <- gmultmix(
 
 summary(nbm2)
 
+nbm3 <- gmultmix(
+  #abundance
+  ~ 1 + tundra + tussock + allshrub + elev + year + offset(log(area)), 
+  ~1 ,
+  ~ 1 + julian + min_after_sun + wind + observer,
+    mixture = "NB",
+  umf.nb, engine="R" )
+
+summary(nbm3)
+
 confint(nbm1, type = "lambda")
 confint(nbm2, type = "lambda")
 confint(fm.2, type = "state")
