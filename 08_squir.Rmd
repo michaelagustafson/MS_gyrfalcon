@@ -472,6 +472,7 @@ confint( nbm1, type = "lambda" ) # now sparse vegetation is the only one where 9
 confint( nbm2, type = "lambda" )
 confint( fm.4, type = "state" )
 
+confint( nbm1, type = "det")
 
 ```
 
