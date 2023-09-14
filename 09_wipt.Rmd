@@ -448,12 +448,12 @@ w.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) 
   theme(text=element_text(size=25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkblue" )
+  geom_line( size = 5, color = "darkblue" )
 #view
 w.elevp
-ggsave("E:/gyrf_analysis/partial prediction plots/wipt_elev.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/wipt_elev.png", width = 20, height = 15, dpi = 300)
 
 ```
 
@@ -477,22 +477,22 @@ w.tussp <- cbind( pred.tuss[,c("Predicted", "lower", "upper") ], tussock.pp ) %>
   # define x and y values
   ggplot(., aes( x = tussock.pp, y = Predicted ) ) + 
   #choose preset look
-  theme_classic( base_size = 15) +
+  theme_classic( base_size = 35) +
   # add labels
   ylim(0, 45) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   labs( x = "Tussock", y = "Willow Ptarmigan density" ) +
   # add band of confidence intervals
-  theme(text=element_text(size=25)) +
+  theme(text=element_text(size=75)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkblue" )
+  geom_line( size = 5, color = "darkblue" )
 #view
 w.tussp
-ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tussock.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tussock.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
 
 ```
 
@@ -517,21 +517,21 @@ w.tundp <- cbind( pred.tun[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
   #choose preset look
   ylim(0, 45) +
-  theme_classic( base_size = 15) +
+  theme_classic( base_size = 35) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
   labs( x = "Tundra", y = "Willow Ptarmigan density" ) +
   # add band of confidence intervals
-  theme(text=element_text(size=25)) +
+  theme(text=element_text(size=75)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkblue")
+  geom_line( size = 5, color = "darkblue")
 #view
 w.tundp
-ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tundra2.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tundra2.png", width = 20, height = 15, dpi = 300)
 
 ```
 
@@ -556,23 +556,23 @@ w.allsp <- cbind( pred.alls[,c("Predicted", "lower", "upper") ], allshrub.pp ) %
   ggplot(., aes( x = allshrub.pp, y = Predicted ) ) + 
   #choose preset look
   ylim(0, 45) +
-  theme_classic( base_size = 15 ) +
+  theme_classic( base_size = 35 ) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
   labs( x = "All shrub", y = "Willow Ptarmigan density" ) +
   # add band of confidence intervals
-  theme(text=element_text(size= 25)) +
+  theme(text=element_text(size= 75)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkblue" )
+  geom_line( size = 5, color = "darkblue" )
 #view
 w.allsp
 
 
-ggsave("E:/gyrf_analysis/partial prediction plots/wipt_allshrub2.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/wipt_allshrub2.png", width = 20, height = 15,dpi = 300)
 
 ```
 
