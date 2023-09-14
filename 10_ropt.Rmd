@@ -611,7 +611,7 @@ r.lowsp <- cbind( pred.lows[,c("Predicted", "lower", "upper") ], lowshrub.pp ) %
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "Low shrub", y = "Rock Ptarmigan \n relative abundance" ) +
+  labs( x = "Low shrub", y = "Rock Ptarmigan density" ) +
   # add band of confidence intervals
   theme(text=element_text(size=25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
@@ -647,23 +647,23 @@ r.svp <- cbind( pred.sv[,c("Predicted", "lower", "upper") ], sparseveg.pp ) %>%
   ggplot(., aes( x = sparseveg.pp, y = Predicted ) ) + 
   #choose preset look
   ylim(0, 1) +
-  theme_classic( base_size = 15 ) +
+  theme_classic( base_size = 35 ) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
   labs( x = "Sparse vegetation", y = "Rock Ptarmigan density" ) +
   # add band of confidence intervals
   #theme(axis.title.y=element_blank()) +
-  theme(text=element_text(size=25)) +
+  theme(text=element_text(size=75)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "darkseagreen1" ) +
+               size = 5, alpha = 0.5, fill = "darkseagreen" ) +
   # add mean line on top
-  geom_line( linewidth = 2, color = "darkgreen" ) 
+  geom_line( linewidth = 5, color = "darkgreen" ) 
 
 r.svp
 
-ggsave("E:/gyrf_analysis/partial prediction plots/ropt_sparseveg.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/ropt_sparseveg.png", width = 20, height = 15, dpi = 300)
 
 
 
@@ -687,16 +687,16 @@ r.elevp <- cbind( pred.lows[,c("Predicted", "lower", "upper") ], elev.pp ) %>%
   ggplot(., aes( x = elev.pp, y = Predicted ) ) + 
   #choose preset look
   #ylim(0, 0.5) +
-  theme_classic( base_size = 15 ) +
+  theme_classic( base_size = 35 ) +
   # turn x axis into percent scale
   #scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
   labs( x = "Elevation (m)", y = "Rock Ptarmigan \n relative abundance" ) +
   # add band of confidence intervals
-  theme(text=element_text(size=25)) +
+  theme(text=element_text(size=75)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "darkseagreen1" ) +
+               size = 1.5, alpha = 0.5, fill = "darkseagreen" ) +
   # add mean line on top
   geom_line( linewidth = 2, color = "darkgreen" ) 
 #view
@@ -756,6 +756,7 @@ julian.pp <- seq( min( all.env2[,"julian"]),max(all.env2[,"julian"]),
 
 wind.pp <- seq( min( all.env2[,"wind"]),max( all.env2[,"wind"]),
                    length.out = n )
+wind.km <- wind.pp*1.60934
 
 minsun.pp <- seq( min( all.env2[,"min_after_sun"]),max( all.env2[,"min_after_sun"]),
                    length.out = n )
@@ -782,7 +783,7 @@ minsun.pp <- seq( min( all.env2[,"min_after_sun"]),max( all.env2[,"min_after_sun
 
 #standardize predictors:
 jul.std <- scale( julian.pp )
-wind.std <- scale( wind.pp )
+wind.std.km <- scale( wind.km )
 minsun.std <- scale( minsun.pp )
 #area.x = pi*400*400/10000
 
@@ -805,23 +806,24 @@ obsvp.det <- pred.obs %>%
   # define x and y values
   ggplot(., aes( x = observer, y = Predicted, color = observer ) ) + 
   #choose preset look
-  theme_classic( base_size = 15 ) +
+  theme_classic( base_size = 35 ) +
   #remove legend
   theme( legend.position = "none" ) +
   # add labels
   labs( x = "Observer", y = "Predicted detection" ) +
+  theme(text=element_text(size=75)) +
   #add mean detection for each observer
-  geom_point( size = 4 ) +
+  geom_point( size = 15 ) +
   # add confidence intervals
   geom_errorbar( aes(ymin = lower, ymax = upper ), 
-               size = 1.5, width = 0.3 ) +
+               size = 5, width = 0.2 ) +
   scale_color_manual(values=c('darkgreen','darkgreen','darkgreen')) +
   ylim(0,0.75)
 #view
 obsvp.det
 
 
-ggsave("E:/gyrf_analysis/detection partial plots/ropt_observer.png", dpi = 300)
+ggsave("E:/gyrf_analysis/detection partial plots/ropt_observer.png", width = 15, height = 15, dpi = 300)
 ```
 Julian
 
@@ -841,22 +843,23 @@ julp.det <- cbind( pred.jul[,c("Predicted", "lower", "upper") ], julian.pp ) %>%
   # define x and y values
   ggplot(., aes( x = julian.pp, y = Predicted ) ) + 
   #choose preset look
-  theme_classic( base_size = 15 ) +
+  theme_classic( base_size = 35 ) +
   # add labels
   labs( x = "Julian date", y = "Predicted detection" ) +
+  theme(text=element_text(size=75)) +
   # add band of confidence intervals
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "darkseagreen3" ) +
+               size = 5, alpha = 0.5, fill = "darkseagreen" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkgreen" ) +
+  geom_line( size = 5, color = "darkgreen" ) +
   ylim(0,.75)
 #view
 julp.det
 
 
 
-ggsave("E:/gyrf_analysis/detection partial plots/ropt_julian.png", dpi = 300)
+ggsave("E:/gyrf_analysis/detection partial plots/ropt_julian.png", width = 15, height = 15, dpi = 300)
 
 ```
 Wind speed
@@ -864,7 +867,7 @@ Wind speed
 ```{r detwindspp}
 detDatawind <- data.frame( observer = factor("DS", levels = c("DS", "KW","MG") ),
                        julian = 0, 
-                       wind = wind.std, 
+                       wind = wind.std.km, 
                        min_after_sun = 0)
 
 
@@ -872,24 +875,25 @@ detDatawind <- data.frame( observer = factor("DS", levels = c("DS", "KW","MG") )
 pred.wind <- predict( nbm1, type = "det", newdata = detDatawind, 
                           appendData = TRUE )
 
-windp.det <- cbind( pred.wind[,c("Predicted", "lower", "upper") ], wind.pp ) %>%
+windp.det <- cbind( pred.wind[,c("Predicted", "lower", "upper") ], wind.km ) %>%
   # define x and y values
-  ggplot(., aes( x = wind.pp, y = Predicted ) ) + 
+  ggplot(., aes( x = wind.km, y = Predicted ) ) + 
   #choose preset look
-  theme_classic( base_size = 15 ) +
+  theme_classic( base_size = 35 ) +
   # add labels
-  labs( x = "Wind speed (mph)", y = "Predicted detection" ) +
+  labs( x = "Wind speed (kph)", y = "Predicted detection" ) +
+  theme(text=element_text(size=75)) +
   # add band of confidence intervals
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "darkseagreen" ) +
+               size = 5, alpha = 0.5, fill = "darkseagreen" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkgreen" ) +
+  geom_line( size = 5, color = "darkgreen" ) +
   ylim(0,.75)
 #view
 windp.det
 
-ggsave("E:/gyrf_analysis/detection partial plots/ropt_wind.png", dpi = 300)
+ggsave("E:/gyrf_analysis/detection partial plots/ropt_wind.png", width = 15, height = 15, dpi = 300)
 
 ```
 
@@ -911,20 +915,21 @@ sunp.det <- cbind( pred.sun[,c("Predicted", "lower", "upper") ], minsun.pp ) %>%
   # define x and y values
   ggplot(., aes( x = minsun.pp, y = Predicted ) ) + 
   #choose preset look
-  theme_classic( base_size = 15 ) +
+  theme_classic( base_size = 35 ) +
   # add labels
   labs( x = "Minutes after sunrise", y = "Predicted detection" ) +
+   theme(text=element_text(size=75)) +
   # add band of confidence intervals
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "darkseagreen" ) +
+               size = 5, alpha = 0.5, fill = "darkseagreen" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkgreen" ) +
+  geom_line( size = 5, color = "darkgreen" ) +
   ylim(0,.75)
 #view
 sunp.det
 
 
-ggsave("E:/gyrf_analysis/detection partial plots/ropt_minsun.png", dpi = 300)
+ggsave("E:/gyrf_analysis/detection partial plots/ropt_minsun.png", width = 15, height = 15, dpi = 300)
 
 ```

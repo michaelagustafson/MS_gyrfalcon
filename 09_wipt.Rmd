@@ -448,12 +448,12 @@ w.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) 
   theme(text=element_text(size=25)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkblue" )
+  geom_line( size = 5, color = "darkblue" )
 #view
 w.elevp
-ggsave("E:/gyrf_analysis/partial prediction plots/wipt_elev.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/wipt_elev.png", width = 20, height = 15, dpi = 300)
 
 ```
 
@@ -477,22 +477,22 @@ w.tussp <- cbind( pred.tuss[,c("Predicted", "lower", "upper") ], tussock.pp ) %>
   # define x and y values
   ggplot(., aes( x = tussock.pp, y = Predicted ) ) + 
   #choose preset look
-  theme_classic( base_size = 15) +
+  theme_classic( base_size = 35) +
   # add labels
   ylim(0, 45) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   labs( x = "Tussock", y = "Willow Ptarmigan density" ) +
   # add band of confidence intervals
-  theme(text=element_text(size=25)) +
+  theme(text=element_text(size=75)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkblue" )
+  geom_line( size = 5, color = "darkblue" )
 #view
 w.tussp
-ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tussock.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tussock.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
 
 ```
 
@@ -517,21 +517,21 @@ w.tundp <- cbind( pred.tun[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
   #choose preset look
   ylim(0, 45) +
-  theme_classic( base_size = 15) +
+  theme_classic( base_size = 35) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
   labs( x = "Tundra", y = "Willow Ptarmigan density" ) +
   # add band of confidence intervals
-  theme(text=element_text(size=25)) +
+  theme(text=element_text(size=75)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkblue")
+  geom_line( size = 5, color = "darkblue")
 #view
 w.tundp
-ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tundra2.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tundra2.png", width = 20, height = 15, dpi = 300)
 
 ```
 
@@ -556,23 +556,23 @@ w.allsp <- cbind( pred.alls[,c("Predicted", "lower", "upper") ], allshrub.pp ) %
   ggplot(., aes( x = allshrub.pp, y = Predicted ) ) + 
   #choose preset look
   ylim(0, 45) +
-  theme_classic( base_size = 15 ) +
+  theme_classic( base_size = 35 ) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
   labs( x = "All shrub", y = "Willow Ptarmigan density" ) +
   # add band of confidence intervals
-  theme(text=element_text(size= 25)) +
+  theme(text=element_text(size= 75)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkblue" )
+  geom_line( size = 5, color = "darkblue" )
 #view
 w.allsp
 
 
-ggsave("E:/gyrf_analysis/partial prediction plots/wipt_allshrub2.png", dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots/wipt_allshrub2.png", width = 20, height = 15,dpi = 300)
 
 ```
 
@@ -624,6 +624,7 @@ julian.pp <- seq( min( all.env2[,"julian"]),max(all.env2[,"julian"]),
 
 wind.pp <- seq( min( all.env2[,"wind"]),max( all.env2[,"wind"]),
                    length.out = n )
+wind.km <- wind.pp*1.60934
 
 minsun.pp <- seq( min( all.env2[,"min_after_sun"]),max( all.env2[,"min_after_sun"]),
                    length.out = n )
@@ -650,7 +651,7 @@ minsun.pp <- seq( min( all.env2[,"min_after_sun"]),max( all.env2[,"min_after_sun
 
 #standardize predictors:
 jul.std <- scale( julian.pp )
-wind.std <- scale( wind.pp )
+wind.std.km <- scale( wind.km )
 minsun.std <- scale( minsun.pp )
 #area.x = pi*400*400/10000
 
@@ -673,23 +674,24 @@ obsvp.det <- pred.obs %>%
   # define x and y values
   ggplot(., aes( x = observer, y = Predicted, color = observer ) ) + 
   #choose preset look
-  theme_classic( base_size = 15 ) +
+  theme_classic( base_size = 35 ) +
   #remove legend
   theme( legend.position = "none" ) +
   # add labels
   labs( x = "Observer", y = "Predicted detection" ) +
+  theme(text=element_text(size=75)) +
   #add mean detection for each observer
-  geom_point( size = 4 ) +
+  geom_point( size = 15 ) +
   # add confidence intervals
   geom_errorbar( aes(ymin = lower, ymax = upper ), 
-               size = 1.5, width = 0.3 ) +
+               size = 4, width = 0.3 ) +
   scale_color_manual(values=c('darkblue','darkblue','darkblue')) +
   ylim(0,0.6)
 #view
 obsvp.det
 
 
-ggsave("E:/gyrf_analysis/detection partial plots/wipt_observer.png", dpi = 300)
+ggsave("E:/gyrf_analysis/detection partial plots/wipt_observer.png", width = 15, height = 15, dpi = 300)
 ```
 Julian
 
@@ -709,22 +711,23 @@ julp.det <- cbind( pred.jul[,c("Predicted", "lower", "upper") ], julian.pp ) %>%
   # define x and y values
   ggplot(., aes( x = julian.pp, y = Predicted ) ) + 
   #choose preset look
-  theme_classic( base_size = 15 ) +
+  theme_classic( base_size = 35 ) +
   # add labels
   labs( x = "Julian date", y = "Predicted detection" ) +
+  theme(text=element_text(size=75)) +
   # add band of confidence intervals
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkblue" ) +
+  geom_line( size = 5, color = "darkblue" ) +
   ylim(0,.6)
 #view
 julp.det
 
 
 
-ggsave("E:/gyrf_analysis/detection partial plots/wipt_julian.png", dpi = 300)
+ggsave("E:/gyrf_analysis/detection partial plots/wipt_julian.png", width = 15, height = 15, dpi = 300)
 
 ```
 Wind speed
@@ -732,7 +735,7 @@ Wind speed
 ```{r detwindspp}
 detDatawind <- data.frame( observer = factor("DS", levels = c("DS", "KW","MG") ),
                        julian = 0, 
-                       wind = wind.std, 
+                       wind = wind.std.km, 
                        min_after_sun = 0)
 
 
@@ -740,24 +743,25 @@ detDatawind <- data.frame( observer = factor("DS", levels = c("DS", "KW","MG") )
 pred.wind <- predict( nbm1, type = "det", newdata = detDatawind, 
                           appendData = TRUE )
 
-windp.det <- cbind( pred.wind[,c("Predicted", "lower", "upper") ], wind.pp ) %>%
+windp.det <- cbind( pred.wind[,c("Predicted", "lower", "upper") ], wind.km ) %>%
   # define x and y values
-  ggplot(., aes( x = wind.pp, y = Predicted ) ) + 
+  ggplot(., aes( x = wind.km, y = Predicted ) ) + 
   #choose preset look
-  theme_classic( base_size = 15 ) +
+  theme_classic( base_size = 35 ) +
   # add labels
-  labs( x = "Wind speed (mph)", y = "Predicted detection" ) +
+  labs( x = "Wind speed (kph)", y = "Predicted detection" ) +
+  theme(text=element_text(size=75)) +
   # add band of confidence intervals
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkblue" ) +
+  geom_line( size = 5, color = "darkblue" ) +
   ylim(0,.6)
 #view
 windp.det
 
-ggsave("E:/gyrf_analysis/detection partial plots/wipt_wind.png", dpi = 300)
+ggsave("E:/gyrf_analysis/detection partial plots/wipt_wind.png", width = 15, height = 15, dpi = 300)
 
 ```
 
@@ -779,21 +783,22 @@ sunp.det <- cbind( pred.sun[,c("Predicted", "lower", "upper") ], minsun.pp ) %>%
   # define x and y values
   ggplot(., aes( x = minsun.pp, y = Predicted ) ) + 
   #choose preset look
-  theme_classic( base_size = 15 ) +
+  theme_classic( base_size = 35 ) +
   # add labels
   labs( x = "Minutes after sunrise", y = "Predicted detection" ) +
+  theme(text=element_text(size=75)) +
   # add band of confidence intervals
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "lightblue3" ) +
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
-  geom_line( size = 2, color = "darkblue" ) +
+  geom_line( size = 5, color = "darkblue" ) +
   ylim(0,.6)
 #view
 sunp.det
 
 
-ggsave("E:/gyrf_analysis/detection partial plots/wipt_minsun.png", dpi = 300)
+ggsave("E:/gyrf_analysis/detection partial plots/wipt_minsun.png", width = 15, height = 15, dpi = 300)
 
 ```
 

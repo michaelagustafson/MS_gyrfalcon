@@ -571,12 +571,13 @@ print(gof.nb1)
 chat.4 <- gof.fm.4@t0[2]/mean(gof.fm.4@t.star[,2])
 chat.4 # 0.8144976 on 29 Nov 2022
 
-
-
+chat.nb <- gof.nb1@t0[2]/mean(gof.nb1@t.star[,2])
+chat.nb #0.6535601
 
 #saveRDS(fm.4, "E:/gyrf_analysis/gyrf3/models/squirfm_13Sept22.rds")
 #fm.4 <- readRDS(here("models/squirfm_13Sept22.rds"))
 
+saveRDS(gof.nb1, "C:/Users/Ryan/OneDrive/Documents/MSgyrfalcon/squirgof_13Sept23.rds")
 
 ```
  
