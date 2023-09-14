@@ -410,7 +410,10 @@ fitstats.nb1 <- function(nbm1) {
 
 print(gof.nb1)
 
+saveRDS(gof.nb1, ("C:/Users/MICHAELAGUSTAFSO/Documents/MSgyrfalcon/rock_gof_13Sep23.rds"))
 
+chat.nb <- gof.nb1@t0[2]/mean(gof.nb1@t.star[,2])
+chat.nb # 0.8939013
 
 # compute c-hat: 0.9398  but model not so good...
 chat.10 <- gof.fm.10@t0[2]/mean(gof.fm.10@t.star[,2])
