@@ -465,7 +465,15 @@ nbm2 <- gmultmix(
 
 summary(nbm2)
 
+nbm3 <- gmultmix(
+  #abundance
+  ~ 1 + tundra + lowshrub + sparseveg  + elev + year + offset(log(area)), 
+  ~1 ,
+  ~ 1 + julian + min_after_sun + wind + observer,
+    mixture = "NB",
+  umf.nb, engine="R" )
 
+summary(nbm3)
 
 #comparing output between three models
 confint( nbm1, type = "lambda" ) # now sparse vegetation is the only one where 95CI don't cross 0
