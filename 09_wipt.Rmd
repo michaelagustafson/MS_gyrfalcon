@@ -253,6 +253,7 @@ confint(nbm1, type = "lambda")
 confint(nbm2, type = "lambda")
 confint(fm.2, type = "state")
 
+confint(nbm1, type = "det")
 
 ms2 <- fitList(
   "lam(.)p(.)" = fm0,
