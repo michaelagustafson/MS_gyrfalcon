@@ -874,7 +874,7 @@ pred.wind <- predict( nbm1, type = "det", newdata = detDatawind,
 
 windp.det <- cbind( pred.wind[,c("Predicted", "lower", "upper") ], wind.km ) %>%
   # define x and y values
-  ggplot(., aes( x = wind.pp, y = Predicted ) ) + 
+  ggplot(., aes( x = wind.km, y = Predicted ) ) + 
   #choose preset look
   theme_classic( base_size = 35 ) +
   # add labels
