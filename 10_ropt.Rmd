@@ -654,9 +654,9 @@ r.svp <- cbind( pred.sv[,c("Predicted", "lower", "upper") ], sparseveg.pp ) %>%
   theme(text=element_text(size=75)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 1.5, alpha = 0.5, fill = "darkseagreen" ) +
+               size = 5, alpha = 0.5, fill = "darkseagreen" ) +
   # add mean line on top
-  geom_line( linewidth = 2, color = "darkgreen" ) 
+  geom_line( linewidth = 5, color = "darkgreen" ) 
 
 r.svp
 
@@ -847,7 +847,7 @@ julp.det <- cbind( pred.jul[,c("Predicted", "lower", "upper") ], julian.pp ) %>%
   # add band of confidence intervals
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 5, alpha = 0.5, fill = "darkseagreen3" ) +
+               size = 5, alpha = 0.5, fill = "darkseagreen" ) +
   # add mean line on top
   geom_line( size = 5, color = "darkgreen" ) +
   ylim(0,.75)
