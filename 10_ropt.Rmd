@@ -753,6 +753,7 @@ julian.pp <- seq( min( all.env2[,"julian"]),max(all.env2[,"julian"]),
 
 wind.pp <- seq( min( all.env2[,"wind"]),max( all.env2[,"wind"]),
                    length.out = n )
+wind.km <- wind.pp*1.60934
 
 minsun.pp <- seq( min( all.env2[,"min_after_sun"]),max( all.env2[,"min_after_sun"]),
                    length.out = n )
@@ -779,7 +780,7 @@ minsun.pp <- seq( min( all.env2[,"min_after_sun"]),max( all.env2[,"min_after_sun
 
 #standardize predictors:
 jul.std <- scale( julian.pp )
-wind.std <- scale( wind.pp )
+wind.std.km <- scale( wind.km )
 minsun.std <- scale( minsun.pp )
 #area.x = pi*400*400/10000
 
@@ -863,7 +864,7 @@ Wind speed
 ```{r detwindspp}
 detDatawind <- data.frame( observer = factor("DS", levels = c("DS", "KW","MG") ),
                        julian = 0, 
-                       wind = wind.std, 
+                       wind = wind.std.km, 
                        min_after_sun = 0)
 
 
@@ -871,13 +872,13 @@ detDatawind <- data.frame( observer = factor("DS", levels = c("DS", "KW","MG") )
 pred.wind <- predict( nbm1, type = "det", newdata = detDatawind, 
                           appendData = TRUE )
 
-windp.det <- cbind( pred.wind[,c("Predicted", "lower", "upper") ], wind.pp ) %>%
+windp.det <- cbind( pred.wind[,c("Predicted", "lower", "upper") ], wind.km ) %>%
   # define x and y values
   ggplot(., aes( x = wind.pp, y = Predicted ) ) + 
   #choose preset look
   theme_classic( base_size = 35 ) +
   # add labels
-  labs( x = "Wind speed (mph)", y = "Predicted detection" ) +
+  labs( x = "Wind speed (kph)", y = "Predicted detection" ) +
   theme(text=element_text(size=75)) +
   # add band of confidence intervals
   geom_smooth( aes(ymin = lower, ymax = upper ), 
