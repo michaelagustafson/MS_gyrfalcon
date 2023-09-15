@@ -418,8 +418,11 @@ writeRaster(wipt.prediction, filename = names(wipt.prediction), bylayer = TRUE, 
 
 ```{r wiptpredmap}
 
-save.image(plot(wipt.prediction, axes=FALSE, col=terrain.colors(100)))
-plot(wipt.prediction, axes=FALSE, col=terrain.colors(100))
+library(RColorBrewer)
+
+
+plot(wipt.prediction, axes=FALSE, col=colorRampPalette(brewer.pal(3,"Blues"))(100))
+
 
 sum_raster_cells <-cellStats(wipt.prediction, 'sum')
 sum_raster_cells
