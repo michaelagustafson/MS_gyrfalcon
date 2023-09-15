@@ -326,10 +326,12 @@ fitstats.nb1 <- function(nbm1) {
 
 print(gof.nb1)
 
+
 saveRDS(gof.nb1, ("C:/Users/Ryan/OneDrive/Documents/MSgyrfalcon/wipt_gof_13Sep23.rds"))
 
 chat.nb <- gof.nb1@t0[2]/mean(gof.nb1@t.star[,2])
-chat.nb
+chat.nb # 0.9479961
+
 
 
 # compute c-hat
