@@ -292,20 +292,23 @@ nbm2 <- gmultmix(
 #model didn't run with area as offset EDIT: added fixed area offset back in
 summary(nbm2)
 
-#with log area
+#with year factor
 nbm3 <- gmultmix(
   #abundance
-  ~ 1 + tundra + lowshrub + sparseveg  + elev + offset(log(area)), 
+  ~ 1 + tundra + lowshrub + sparseveg  + elev + year +offset(log(area)), 
   ~ 1 ,
   ~ 1 + julian + min_after_sun + wind + observer,
-    mixture = "P",
+    mixture = "NB",
   umf.nb, engine="R" )
-#doesn't run 
+
+summary(nbm3)
 
 #comparing output between three models
 confint( nbm1, type = "lambda" ) # now sparse vegetation is the only one where 95CI don't cross 0
 confint( nbm2, type = "lambda" )
 confint( fm.10, type = "state" )
+
+confint( nbm1, type = "det")
 
 # poisson model
 fm0 <- multinomPois(~ 1 ~ 1, data = roptFrame2) #null model
@@ -432,6 +435,11 @@ write.csv(rp.det.confint, here("output/rpci_det.csv"))
 
 
 save.image(here("10_ropt_workspace.RData"))
+
+
+
+
+
 ```
 
 
