@@ -509,7 +509,9 @@ writeRaster(ropt.prediction, filename = names(ropt.prediction), bylayer = TRUE, 
 
 ```{r roptpredmap}
 
-plot(ropt.prediction, axes=FALSE, col=terrain.colors(100))
+plot(ropt.prediction, axes=FALSE, col=colorRampPalette(brewer.pal(5,"Greens"))(100))
+
+
 
 cellStats(ropt.prediction, 'sum')
 sum_raster_cells
