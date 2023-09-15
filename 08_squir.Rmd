@@ -667,8 +667,8 @@ writeRaster(sq.prediction, filename = names(sq.prediction), bylayer = TRUE, form
 # PREDICTION MAP
 
 ```{r squirpredmap}
-
-plot(sq.prediction, axes=FALSE, col=terrain.colors(100))
+library(RColorBrewer)
+plot(sq.prediction, axes=FALSE, col=colorRampPalette(brewer.pal(3,"Reds"))(100))
 
 sum_raster_cells <-cellStats(sq.prediction, 'sum')
 sum_raster_cells
