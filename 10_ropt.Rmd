@@ -45,8 +45,8 @@ library(brms)
 ## LOAD OBSERVATION and ENVIRONMENTAL DATA
 
 ```{r loaddata}
-all.obs <- read.csv(here("output/obs_3years.csv"))
-all.env2 <- read.csv(here("output/final_env_join_22Aug22.csv"))
+all.obs <- read.csv("E:/gyrf_analysis/gyrf3/output/obs_3years.csv")
+all.env2 <- read.csv("E:/gyrf_analysis/gyrf3/output/final_env_join_22Aug22.csv")
 
 # remove extra 'X' column from import
 all.obs <- all.obs[,-c(1)]
@@ -64,11 +64,11 @@ for (i in 1:nrow(all.env2)) {
 ## PREP OBSERVATION DATA FOR SELECTED SPECIES
 
 ```{r roptprep}
-# copy data table for WIPT
+# copy data table for ropt
 
 ropt <- data.frame(all.obs)
 
-# change all species codes of WIPT to a 1 and all other species to 0
+# change all species codes of ropt to a 1 and all other species to 0
 ropt$species[ropt$species == "ROPT"] <- 1
 ropt$species[ropt$species != "1"] <- 0
 
@@ -91,6 +91,9 @@ ropt2 <- mutate(ropt,
                                                        ifelse(ropt$time_int %in% 8:9, "5", "NA"))))))
 
 
+
+
+
 # aggregate rows and sum counts for matching keys and time intervals
 # must change formats first:
 
@@ -102,6 +105,23 @@ ropt2$count <- as.integer(ropt2$count)
 
 
 sum(ropt2$count) # sample size 73
+
+# get number of sites with counts each year
+ropt.19 <- subset(ropt2, year == "2019" & ropt2$count > 0)
+sum(ropt.19$count) # 45 obs in 2019
+unique(ropt.19$id) # 31 sites in 19
+
+ropt.21 <- subset(ropt2, year == "2021" & ropt2$count > 0)
+sum(ropt.21$count) # 18 obs in 2021
+unique(ropt.21$id) # 15 sites in 21
+
+ropt.22 <- subset(ropt2, year == "2022" & ropt2$count > 0)
+sum(ropt.22$count) # 10 obs in 2022
+unique(ropt.22$id) # 6 sites in 22
+
+
+
+
 
 ropt.agg <- aggregate(x = ropt2$count, 
                       by = list(ropt2$id, ropt2$time_int), 
@@ -139,6 +159,10 @@ unique(ropt.agg$id) # should end up with 988 rows
 ropt.wide <- ropt.agg %>%
   dplyr::select(id, time_int, count) %>%
   spread(key = time_int, value = count, fill = 0)
+
+#double check sample size
+sum(ropt.wide[,2:6])
+
 
 write.csv(ropt.wide, here("output/ropt_wide_22aug22.csv"))
 ropt.wide <- read.csv(here("output/ropt_wide_22aug22.csv"))
@@ -203,7 +227,7 @@ all.env.scaled2 <- all.env.scaled2[,-c(1)]
 ```
 
 ## TIME-REMOVAL MODEL
-WIPT sample size: 62 individuals counted
+ropt sample size: 62 individuals counted
 ```{r trmodel}
 
 # check structures and join data frames
@@ -343,6 +367,12 @@ summary(fm.11)
 
 ### nonsignificant cat variables
 ## hear? try removing and check other values maybe observer? b/c of std error
+
+
+write.csv(summary(nbm1@estimates[1]), "E:/Cruz Lab/03Results/roptNBsummarylambda.csv")
+write.csv(summary(nbm1@estimates[2]), "E:/Cruz Lab/03Results/roptNBsummarydet.csv")
+
+
 
 
 ```
