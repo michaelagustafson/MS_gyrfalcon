@@ -42,10 +42,10 @@ library(shiny)
 ## LOAD OBSERVATION and ENVIRONMENTAL DATA
 
 ```{r loaddata}
-all.obs <- read.csv(here("output/obs_3years.csv"))
-lc.vars <- read.csv(here("output/data_pts_17Aug.csv")) #these are the land cover characteristics and elevation we extracted in the previous code 
+all.obs <- read.csv("E:/gyrf_analysis/gyrf3/output/obs_3years.csv")
+lc.vars <- read.csv("E:/gyrf_analysis/gyrf3/output/data_pts_17Aug.csv") #these are the land cover characteristics and elevation we extracted in the previous code 
 
-site.vars <- read.csv(here("output/env_3years.csv")) #these are the data collected at the beginning of each survey (temp, wind, etc.)
+site.vars <- read.csv(here("E:/gyrf_analysis/gyrf3/output/env_3years.csv")) #these are the data collected at the beginning of each survey (temp, wind, etc.)
 
 # remove extra 'X' column from all.obs and site.vars
 all.obs <- all.obs[,-c(1)]
@@ -82,6 +82,7 @@ for (i in 1:nrow(all.env2)) {
    all.env2$shrub[i] <- all.env2$openshrub[i] + all.env2$tallshrub[i]
 }
 
+
 for (i in 1:nrow(all.env2)) {
    all.env2$allshrub[i] <- all.env2$openshrub[i] + all.env2$tallshrub[i] + all.env2$lowshrub[i]
 }
@@ -116,6 +117,29 @@ squir2 <- mutate(squir,
                                                 ifelse(squir$time_int %in% 6:7, "4",
                                                        ifelse(squir$time_int %in% 8:9, "5", "NA"))))))
 
+# look at sample size
+
+squir2$count <- as.integer(squir2$count)
+sum(squir2$count) # sample size 80
+
+# get number of sites with counts each year
+squir.19 <- subset(squir2, year == "2019" & squir2$count > 0)
+sum(squir.19$count) # 42 obs in 2019
+unique(squir.19$id) # 17 sites in 19
+
+squir.21 <- subset(squir2, year == "2021" & squir2$count > 0)
+sum(squir.21$count) # 35 obs in 2021
+unique(squir.21$id) # 23 sites in 21
+
+squir.22 <- subset(squir2, year == "2022" & squir2$count > 0)
+sum(squir.22$count) # 3 obs in 2022
+unique(squir.22$id) # 2 sites in 22
+
+
+
+
+
+
 
 # aggregate rows and sum counts for matching keys and time intervals
 # must change formats first:
@@ -131,7 +155,7 @@ squir.agg <- aggregate(x = squir2$count,
                       FUN = sum)
 
 
-
+sum(squir.agg$x)
 
 # rename columns in aggregated df
 
@@ -163,6 +187,8 @@ unique(squir.agg$id) # should end up with 988 levels
 squir.wide <- squir.agg %>%
   dplyr::select(id, time_int, count) %>%
   spread(key = time_int, value = count, fill = 0)
+
+
 
 #write.csv(squir.wide, here("output/squir_wide_13Sept22.csv"))
 squir.wide <- read.csv(here("output/squir_wide_13Sept22.csv"))
