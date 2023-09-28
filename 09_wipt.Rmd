@@ -45,8 +45,8 @@ library(AHMbook)
 
 ```{r loaddata}
 
-all.obs <- read.csv(here("output/obs_3years.csv"))
-all.env2 <- read.csv(here("output/final_env_join_22Aug22.csv"))
+all.obs <- read.csv(here("E:/gyrf_analysis/gyrf3/output/obs_3years.csv"))
+all.env2 <- read.csv(here("E:/gyrf_analysis/gyrf3/output/final_env_join_22Aug22.csv"))
 
 # remove extra 'X' column from import
 all.obs <- all.obs[,-c(1)]
@@ -107,7 +107,23 @@ wipt2$time_int <- as.factor(wipt2$time_int)
 wipt2$count <- as.integer(wipt2$count)
 
 
-sum(wipt2$count) # sample size 518
+sum(wipt2$count) # sample size 528
+
+
+# get number of sites with counts each year
+
+wipt.19 <- subset(wipt2, year == "2019" & wipt2$count > 0)
+
+sum(wipt.19$count) # 266 obs in 2019
+unique(wipt.19$id) # 126 sites in 19
+
+wipt.21 <- subset(wipt2, year == "2021" & wipt2$count > 0)
+sum(wipt.21$count) # 252 obs in 2021
+unique(wipt.21$id) # 131 sites in 21
+
+wipt.22 <- subset(wipt2, year == "2022" & wipt2$count > 0)
+sum(wipt.22$count) # 10 obs in 2022
+unique(wipt.22$id) # 6 sites in 22
 
 
 wipt.agg <- aggregate(x = wipt2$count, 
@@ -115,7 +131,7 @@ wipt.agg <- aggregate(x = wipt2$count,
                       FUN = sum)
 
 
-
+sum(wipt.agg$x) # sample size still 528
 
 # rename columns in aggregated df
 
@@ -126,6 +142,8 @@ names(wipt.agg)[names(wipt.agg) == "Group.2"] <- "time_int"
 names(wipt.agg)[names(wipt.agg) == "x"] <- "count"
 
 head(wipt.agg)
+
+sum(wipt.agg$count) # double checking count
 
 # okay so wipt.agg is our count dataframe, we don't need any of the other columns,
 # those were only used to help filter out for distance and flyover observatiosn
@@ -142,16 +160,25 @@ miss2 <- anti_join(wipt.agg, all.env2) # clear
 
 # spread dataframes:
 
-unique(wipt.agg$id) # should end up with 916 rows
+unique(wipt.agg$id) # should end up with 988 rows
 
 
 wipt.wide <- wipt.agg %>%
   dplyr::select(id, time_int, count) %>%
   spread(key = time_int, value = count, fill = 0)
 
-#write.csv(wipt.wide, here("output/wiptwide.csv"))
-wipt.wide <- read.csv(here("output/wiptwide.csv"))
+# double check sample size
+
+ss.check <- wipt.wide %>%
+  mutate(all_sum = sum(wipt.wide$'1', wipt.wide$'2' , wipt.wide$'3', wipt.wide$'4', wipt.wide$'5'))
+
+write.csv(wipt.wide, ("E:/gyrf_analysis/gyrf3/output/wiptwide.csv"))
+wipt.wide <- read.csv("E:/gyrf_analysis/gyrf3/output/wiptwide.csv")
 wipt.wide <- wipt.wide[,-c(1)]
+
+
+sum(wipt.wide[, 2:6])
+
 ```
 
 ```{r testvars}
@@ -184,7 +211,7 @@ a7
 WIPT sample size: 516 individuals counted
 ```{r trframe}
 #all.env.scaled2 <- read.csv(here("output/all.env.scaled_22Aug22.csv"))
-all.env.scaled2 <- all.env.scaled2[,-c(1)]
+#all.env.scaled2 <- all.env.scaled2[,-c(1)]
 
 wipt.env.join <- left_join(wipt.wide, all.env.scaled2)
 head(wipt.env.join); dim(wipt.env.join)
@@ -283,12 +310,19 @@ summary(fm.2)
 #summary(fm.7)
 
 
-wp.coef <- as.data.frame(coef(fm.2))
-wp.state.confint <- as.data.frame(confint(fm.2, level = 0.95, type = "state"))
-wp.det.confint <- as.data.frame(confint(fm.2, level = 0.95, type = "det"))
-write.csv(wp.coef, here("output/wpcoef.csv"))
-write.csv(wp.state.confint, here("output/wpci_state.csv"))
-write.csv(wp.det.confint, here("output/wpci_det.csv"))
+wp.coef <- as.data.frame(coef(nbm1))
+wp.state.confint <- as.data.frame(confint(nbm1, level = 0.95, type = "lambda"))
+wp.det.confint <- as.data.frame(confint(nbm1, level = 0.95, type = "det"))
+write.csv(wp.coef, ("E:/Cruz Lab/03Results/wpcoef.csv"))
+write.csv(wp.state.confint, here("E:/Cruz Lab/03Results/wpci_state.csv"))
+write.csv(wp.det.confint, here("E:/Cruz Lab/03Results/wpci_det.csv"))
+
+
+summary(nbm1@estimates[2])
+write.csv(summary(nbm1@estimates[1]), "E:/Cruz Lab/03Results/wiptNBsummarylambda.csv")
+write.csv(summary(nbm1@estimates[2]), "E:/Cruz Lab/03Results/wiptNBsummarydet.csv")
+
+
 
 ```
 
