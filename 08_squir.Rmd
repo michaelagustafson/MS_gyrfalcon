@@ -507,6 +507,11 @@ confint( nbm2, type = "lambda" )
 confint( fm.4, type = "state" )
 
 confint( nbm1, type = "det")
+sq.coef <- as.data.frame(coef(nbm1))
+
+
+write.csv(summary(nbm1@estimates[1]), "E:/Cruz Lab/03Results/squirNBsummarylambda.csv")
+write.csv(summary(nbm1@estimates[2]), "E:/Cruz Lab/03Results/squirNBsummarydet.csv")
 
 ```
 
