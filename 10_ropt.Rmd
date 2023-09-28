@@ -547,6 +547,34 @@ cellStats(ropt.prediction, 'sum')
 sum_raster_cells
 
 
+# Extract raster values as a vector
+r_values <- getValues(ropt.prediction)
+
+# Define a function to calculate the mean and confidence intervals using bootstrapping
+calculate_mean_ci <- function(x, indices) {
+  sample_data <- x[indices]
+  mean_value <- mean(sample_data, na.rm = TRUE)
+  ci <- boot::boot(sample_data, statistic = function(data, indices) {
+    mean(data[indices], na.rm = TRUE)
+  }, R = 1000)  # You can adjust the number of bootstrap replicates (R) as needed
+  ci_summary <- quantile(ci$t, c(0.025, 0.975))
+  return(list(mean = mean_value, ci = ci_summary))
+}
+
+# Calculate mean and confidence intervals for the entire raster values
+result <- calculate_mean_ci(r_values, 1:length(r_values))
+
+# Extract the mean and confidence intervals
+mean_value <- result$mean
+ci <- result$ci
+
+# Print the mean and confidence intervals
+print(mean_value)
+print(ci)
+
+
+cellStats(ropt.prediction, 'mean')
+
 ```
 
 
