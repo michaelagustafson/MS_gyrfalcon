@@ -509,6 +509,12 @@ confint( fm.4, type = "state" )
 confint( nbm1, type = "det")
 sq.coef <- as.data.frame(coef(nbm1))
 
+sqcilam <- as.data.frame(confint(nbm1, type = "lambda"))
+sqcidet <- as.data.frame(confint(nbm1, type = "det"))
+
+
+write.csv(sqcilam, "E:/Cruz Lab/03Results/sqconfintlam.csv")
+write.csv(sqcidet, "E:/Cruz Lab/03Results/sqconfintdet.csv")
 
 write.csv(summary(nbm1@estimates[1]), "E:/Cruz Lab/03Results/squirNBsummarylambda.csv")
 write.csv(summary(nbm1@estimates[2]), "E:/Cruz Lab/03Results/squirNBsummarydet.csv")
