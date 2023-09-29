@@ -466,9 +466,12 @@ write.csv(rp.det.confint, here("output/rpci_det.csv"))
 
 save.image(here("10_ropt_workspace.RData"))
 
+rpcilam <- as.data.frame(confint(nbm1, type = "lambda"))
+rpcidet <- as.data.frame(confint(nbm1, type = "det"))
 
 
-
+write.csv(rpcilam, "E:/Cruz Lab/03Results/rpconfintlam.csv")
+write.csv(rpcidet, "E:/Cruz Lab/03Results/rpconfintdet.csv")
 
 ```
 
