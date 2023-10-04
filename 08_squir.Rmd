@@ -43,13 +43,14 @@ library(shiny)
 
 ```{r loaddata}
 all.obs <- read.csv("E:/gyrf_analysis/gyrf3/output/obs_3years.csv")
-lc.vars <- read.csv("E:/gyrf_analysis/gyrf3/output/data_pts_17Aug.csv") #these are the land cover characteristics and elevation we extracted in the previous code 
+lc.vars <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/pland2_400r.csv") #these are the land cover characteristics and elevation we extracted in the previous code 
 
-site.vars <- read.csv(here("E:/gyrf_analysis/gyrf3/output/env_3years.csv")) #these are the data collected at the beginning of each survey (temp, wind, etc.)
+site.vars <- read.csv("E:/gyrf_analysis/gyrf3/output/env_3years.csv") #these are the data collected at the beginning of each survey (temp, wind, etc.)
 
 # remove extra 'X' column from all.obs and site.vars
 all.obs <- all.obs[,-c(1)]
 site.vars <- site.vars[,-c(1)]
+lc.vars <- lc.vars[,-c(1)]
 # inspect
 
 head(all.obs)
@@ -69,11 +70,11 @@ site.vars[552,6] <- "42"
 
 all.env2 <- left_join(lc.vars, site.vars)
 
-write.csv(all.env2, here("output/final_env_join_22Aug22.csv"))
+write.csv(all.env2, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_env_join_04Oct23.csv")
 
 # I would use this code below if I were to reload the 'final_env_join_*date*.csv' into another script or rerun this script and not have to do all the cleaning and joining above:
-all.env2 <- read.csv(here("output/final_env_join_22Aug22.csv"))
-all.env2 <- all.env2[,c(2:25)]
+#all.env2 <- read.csv(here("output/final_env_join_22Aug22.csv"))
+#all.env2 <- all.env2[,c(2:25)]
 
 # create column that is open shrub and tall shrub categories combined and one that is all shrub (tall, open, and low):
 str(all.env2)
@@ -190,9 +191,9 @@ squir.wide <- squir.agg %>%
 
 
 
-#write.csv(squir.wide, here("output/squir_wide_13Sept22.csv"))
-squir.wide <- read.csv(here("output/squir_wide_13Sept22.csv"))
-squir.wide <- squir.wide[,-c(1)]
+write.csv(squir.wide, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/squir_wide_04Oct23.csv")
+#squir.wide <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/squir_wide_04Oct23.csv")
+#squir.wide <- squir.wide[,-c(1)]
 
 sum(squir.wide[,c(2:6)])
 
@@ -260,7 +261,12 @@ litt.scaled <- scale(all.env2$littoral)
 wat.scaled <- scale(all.env2$water)
 shrub.scaled <- scale(all.env2$shrub)
 all.scaled <- scale(all.env2$allshrub)
-steep.scaled <- scale(all.env2$steep)
+#steep.scaled <- scale(all.env2$steep)
+
+
+
+
+save.image("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/squir04Oct23.Rdata")
 
 # create scaled dataframe
 all.env.scaled <- data.frame(all.env2)
