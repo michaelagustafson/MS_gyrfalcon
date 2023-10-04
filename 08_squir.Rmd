@@ -633,28 +633,36 @@ saveRDS(gof.nb1, "C:/Users/Ryan/OneDrive/Documents/MSgyrfalcon/squirgof_13Sept23
 #fm.full <- readRDS("E:/gyrf_analysis/gyrf3/models/squirfm.rds")
 # First need to scale study-wide rasters to match scaling of model:
 
-elev <- raster("E:/gyrf_analysis/gyrf3/output/dem_400.tif")
-lowshrub <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/lowshrub.tif")
-sparseveg <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/sparseveg.tif")
-tundra <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/tundra.tif")
+elev <- raster("E:/gyrf_analysis/MSgyrfalcon/dem_1k.tif")
+lowshrub <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/lowshrub.tif")
+sparseveg <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/sparseveg.tif")
+tundra <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tundra.tif")
 
 
 area.raster <- elev # CHANGE BACK TO ELEVATION ONCE GET RASTER LAYER
-values(area.raster) <- 400*400/10000 # area of a grid pixel, divided by 10000 to standardize
+values(area.raster) <- 1000*1000/10000 # area of a grid pixel, divided by 10000 to standardize
 
 # find center/mean and std dev of scaled covariates to scale prediction surfaces above
 
+cellStats(elev, mean) #173.7808
+cellStats(elev, "sd") #120.5669
 
-elev.s <- (elev-185)/106
+elev.s <- (elev-173.7808)/120.5669
 
+cellStats(lowshrub, mean) #0.1444925
+cellStats(lowshrub, sd) #0.07447781
 
-lowshrub.s <- (lowshrub-0.0562)/0.0794
+lowshrub.s <- (lowshrub-0.1444925)/0.07447781
 
+cellStats(sparseveg, mean) #0.1111009
+cellStats(sparseveg, sd) #0.08905826
 
-sparseveg.s <- (sparseveg-0.0818)/0.168
+sparseveg.s <- (sparseveg-0.1111009)/0.08905826
 
+cellStats(tundra, mean) #0.1608737
+cellStats(tundra, sd) #0.08171017
 
-tundra.s <- (tundra-0.57)/0.306
+tundra.s <- (tundra-0.1608737)/0.08171017
 
 
 # add detection covariates (standardized mean values)
@@ -721,7 +729,8 @@ print(ci)
 
 #write.csv(squir.freq1, here("output/squircellcounts.csv"))
 
-
+plot(sq.prediction)
+res(sq.prediction)
 
 writeRaster(sq.prediction, filename = names(sq.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
 ```
