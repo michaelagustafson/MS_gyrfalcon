@@ -14,7 +14,7 @@ In this script I will be extracting land cover variables, mean elevation, and ra
 
 I will be adding land cover raster data from: https://daac.ornl.gov/ABOVE/guides/Annual_Landcover_ABoVE.html
 
-I will be importing GPS points for 2019 and 2021 and 2022* prey surveys
+I will be importing GPS points for 2019 and 2021 and 2022 prey surveys
 
 
 ## LIBRARY
@@ -40,9 +40,9 @@ library(reshape2)
 ## IMPORT DEM
 Import elevation raster 
 ```{r dem}
-ak_dem <- raster::raster(here("data/dsm_mosaic_AK.tif"))
+ak_dem <- raster::raster("E:/gyrf_analysis/gyrf3/data/dsm_mosaic_AK.tif")
 ```
-
+# Also - we want to put all other rasters into the same crs as the digital elevation model
 
 ## UPLOAD LAND COVER RASTERS
 Uploading the raster that Jenny ran for me that has the land cover tiles mosaiced and in the same CRS as the DEM
@@ -53,12 +53,20 @@ Uploading the raster that Jenny ran for me that has the land cover tiles mosaice
 #all.mos <- raster("E:/Dropbox/Back&Forth/GRYF/michaela/ABoVE_2014lyrs/all.mos.tif")
 #plot(all.mos)
 
-#all.mos.dem <- projectRaster(all.mos, method="ngb", crs = "+proj=aea +lat_0=50 +lon_0=-154 +lat_1=55 +lat_2=65 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
+all.mos.dem <- projectRaster(all.mos, method="ngb", crs = "+proj=aea +lat_0=50 +lon_0=-154 +lat_1=55 +lat_2=65 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
 #writeRaster(all.mos.dem, "E:/Dropbox/Back&Forth/GRYF/michaela/ABoVE_2014lyrs/all.mos.dem.tif", overwrite=TRUE)
 
+test.mos <- raster("E:/gyrf_analysis/gyrf3/data/ABoVE_2014lyrs/all.mos.tif")
+res(test.mos)
 
-all.mos <- raster(here("jenny/all.mos.dem.tif"))
+test.mos.in.dem <- projectRaster(test.mos, method="ngb", crs = "+proj=aea +lat_0=50 +lon_0=-154 +lat_1=55 +lat_2=65 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
 
+res(test.mos.in.dem)
+
+all.mos <- raster("E:/gyrf_analysis/gyrf3/jenny/all.mos.dem.tif")
+res(all.mos)
+
+save.image("landvariables_wkspce.Rdata")
 ```
 
 ## IMPORT SURVEY LOCATIONS
@@ -66,17 +74,20 @@ Already compiled these and put in the correct CRS in previous code
 
 ```{r pionts}
 # these points were previously put in same CRS as dem
-pts <- as.data.frame(readOGR(here("shapefiles"), "pts_3years_2"))
+pts <- as.data.frame(readOGR("E:/gyrf_analysis/gyrf3/shapefiles","pts_3years_2"))
 
 ```
 
 
-## Study Area NEED TO UPDATE AFTER GETTING OCCUPANCY DATA
+## Study Area
 
 ```{r studyarea}
-study.area <- readOGR(here("shapefiles"), "gyrf_studyarea")
+study.area <- readOGR("E:/gyrf_analysis/gyrf3/shapefiles", "gyrf_studyarea")
 crs(study.area)
+crs(ak_dem)
 study.area.dem <- spTransform(study.area, crs(ak_dem))
+
+res(study.area.dem)
 ```
 
 
@@ -90,6 +101,8 @@ c. Remove pixels that result in a mean elevation >500m
 # Step A: Crop and mask elevation raster with study area
 ak_dem.crop <- raster::crop(ak_dem, study.area.dem)
 ak_dem.crop.mask <- raster::mask(ak_dem.crop, study.area.dem)
+
+res(ak_dem.crop.mask)
 
 # Step B: Aggregate elevation raster from 5m res to 400m res
 dem.400 <- aggregate(ak_dem.crop.mask, fact = 80, fun = mean, na.rm = TRUE) # have to include na.rm = true or else elevations >500m come back into the picture!
