@@ -305,7 +305,7 @@ data2 <- cbind(data, steep.elev[,3])
 colnames(data2)[17] <- "steep"
 
 
-write.csv(pland2, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/pland2_400r.csv")
+write.csv(data, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/pland2_400r.csv")
 
 
 save.image("landvariable_wkspce.Rdata")
