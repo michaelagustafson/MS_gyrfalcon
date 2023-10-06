@@ -70,23 +70,23 @@ site.vars[552,6] <- "42"
 
 all.env2 <- left_join(lc.vars, site.vars)
 
-write.csv(all.env2, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_env_join_04Oct23.csv")
+write.csv(all.env2, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_env_join_06Oct23.csv")
 
 # I would use this code below if I were to reload the 'final_env_join_*date*.csv' into another script or rerun this script and not have to do all the cleaning and joining above:
-#all.env2 <- read.csv(here("output/final_env_join_22Aug22.csv"))
+
+#all.env2 <- read.csv("E:/gryf_analysis/MSgyrfalcon/MSgyrfalcon/final_env_join_04Oct23.csv")
 #all.env2 <- all.env2[,c(2:25)]
 
 # create column that is open shrub and tall shrub categories combined and one that is all shrub (tall, open, and low):
 str(all.env2)
 
-for (i in 1:nrow(all.env2)) {
-   all.env2$shrub[i] <- all.env2$openshrub[i] + all.env2$tallshrub[i]
-}
-
 
 for (i in 1:nrow(all.env2)) {
    all.env2$allshrub[i] <- all.env2$openshrub[i] + all.env2$tallshrub[i] + all.env2$lowshrub[i]
 }
+
+
+
 ```
 
 ## PREP OBSERVATION DATA FOR SELECTED SPECIES
@@ -259,14 +259,14 @@ wood.scaled <- scale(all.env2$woodland)
 fen.scaled <- scale(all.env2$fen)
 litt.scaled <- scale(all.env2$littoral)
 wat.scaled <- scale(all.env2$water)
-shrub.scaled <- scale(all.env2$shrub)
+#shrub.scaled <- scale(all.env2$shrub)
 all.scaled <- scale(all.env2$allshrub)
 #steep.scaled <- scale(all.env2$steep)
 
 
 
 
-save.image("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/squir04Oct23.Rdata")
+save.image("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/squir06Oct23.Rdata")
 
 # create scaled dataframe
 all.env.scaled <- data.frame(all.env2)
@@ -291,9 +291,8 @@ all.env.scaled$woodland <- wood.scaled
 all.env.scaled$fen <- fen.scaled
 all.env.scaled$littoral <- litt.scaled
 all.env.scaled$water <- wat.scaled
-all.env.scaled$shrub <- shrub.scaled
 all.env.scaled$allshrub <- all.scaled
-all.env.scaled$steep <- steep.scaled
+
 
 str(all.env.scaled)
 colnames(all.env.scaled)
@@ -304,26 +303,25 @@ colnames(all.env.scaled)
 
 
 colnames(all.env.scaled)
-cor.matrix <- as.matrix(all.env.scaled[,c(2:18, 20, 22, 24, 26:27)])
+cor.matrix <- as.matrix(all.env.scaled[,c(2:17, 19, 21, 23, 25)])
 # first test for normality
 
 
-cor.mat <- rcorr(as.matrix(all.env.scaled[,c(2:18, 20, 22, 24, 26:27)]),type="pearson")
+cor.mat <- rcorr(as.matrix(all.env.scaled[,c(2:17, 19, 21, 23, 25)]),type="pearson")
 cor.mat
 
 
 # no variables with correlation r>0.65 but elevation and range(steepness) 0.6
 # all shrubs has -0.65 with tundra and p-value = 0.000 so it has a moderate correlation
 
-#write.csv(all.env.scaled, here("output/all.env.scaled_22Aug22.csv"))
-all.env.scaled <- read.csv(here("output/all.env.scaled_22Aug22.csv"))
+#write.csv(all.env.scaled, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all.env.scaled_06Oct23.csv")
+all.env.scaled <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all.env.scaled_06Oct23.csv")
 all.env.scaled <- all.env.scaled[,-c(1)]
 ```
 
 Most variables have correlations <0.65 (need to cite the reference for this/find the reference first hahahah)
 
-elevation and range(steepness) 0.6
-all_shrubs has -0.664951061 with tundra
+all_shrubs has -0.664951061 with tundra and p-value 0.000
 
 ## TIME-REMOVAL MODEL
 
@@ -341,7 +339,7 @@ str(squir.env.join)
 colnames(squir.env.join)
 
 timeints <- squir.env.join[,c(2:6)]
-siCovs <- squir.env.join[,c(7:32)]
+siCovs <- squir.env.join[,c(7:31)]
 area <- pi*400^2/10000
 
 head(timeints)
@@ -696,6 +694,7 @@ names(pred.surface) <- c("elev", "lowshrub", "sparseveg", "tundra", "area", "jul
 
 
 sq.prediction <- predict(nbm1, type="lambda", newdata=pred.surface)
+plot(sq.prediction)
 
 #ncell(sq.prediction) # 169556 cells in raster
 cellStats(sq.prediction, 'mean')
