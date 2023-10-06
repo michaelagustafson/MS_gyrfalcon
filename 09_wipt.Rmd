@@ -386,13 +386,19 @@ Used tundra, tussock, low and tall shrub, and elevation in WIPT model (and inclu
 # First need to scale study-wide rasters to match scaling of model:
 
 
+elev <- raster("E:/gyrf_analysis/MSgyrfalcon/dem_1k.tif")
+lowshrub <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/lowshrub.tif")
+openshrub <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/openshrub.tif")
+tallshrub <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tallshrub.tif")
+tundra <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tundra.tif")
+tussock <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tussock.tif")
 
-elev <- raster("E:/gyrf_analysis/gyrf3/output/dem_400.tif")
-lowshrub <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/lowshrub.tif")
-openshrub <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/openshrub.tif")
-tallshrub <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/tallshrub.tif")
-tundra <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/tundra.tif")
-tussock <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/tussock.tif")
+#elev <- raster("E:/gyrf_analysis/gyrf3/output/dem_400.tif")
+#lowshrub <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/lowshrub.tif")
+#openshrub <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/openshrub.tif")
+#tallshrub <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/tallshrub.tif")
+#tundra <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/tundra.tif")
+#tussock <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/tussock.tif")
 
 allshrub = sum(tallshrub,openshrub,lowshrub,na.rm=TRUE)
 #plot(allshrub)
@@ -400,16 +406,37 @@ allshrub = sum(tallshrub,openshrub,lowshrub,na.rm=TRUE)
 
 
 
-area.raster <- elev 
-values(area.raster) <- 400*400/10000 # area of a grid pixel
+area.raster <- elev # CHANGE BACK TO ELEVATION ONCE GET RASTER LAYER
+values(area.raster) <- 1000*1000/10000 # area of a grid pixel, divided by 10000 to standardize
+
 
 # find center/mean and std dev of scaled covariates to scale prediction surfaces above
 ### NEED TO FIND CENTER AND STD DEV FOR SCALED allshrub###
 
-elev.s <- (elev-180)/103
-tundra.s <- (tundra-0.573)/0.305
-tussock.s <- (tussock-0.0632)/0.104
-allshrub.s <- (allshrub-0.233)/0.248
+cellStats(elev, mean) #173.7808
+cellStats(elev, "sd") #120.5669
+
+elev.s <- (elev-173.7808)/120.5669
+
+cellStats(allshrub, mean) #0.2130462
+cellStats(allshrub, sd)#0.1891451
+
+allshrub.s <- (allshrub-0.2130462)/0.1891451
+
+cellStats(tundra, mean) #0.1608737
+cellStats(tundra, sd) #0.08171017
+
+tundra.s <- (tundra-0.1608737)/0.08171017
+
+cellStats(tussock, mean) #0.1202638
+cellStats(tussock, sd) #0.08615176
+
+tussock.s <- (tussock-0.1202638)/0.08615176
+
+#elev.s <- (elev-180)/103
+#tundra.s <- (tundra-0.573)/0.305
+#tussock.s <- (tussock-0.0632)/0.104
+#allshrub.s <- (allshrub-0.233)/0.248
 
 # add detection covariates (standardized mean values)
 
@@ -434,6 +461,8 @@ names(pred.surface) <- c("tundra", "tussock", "allshrub", "elev", "area", "julia
 
 
 wipt.prediction <- predict(nbm1, type="lambda", newdata=pred.surface)
+
+plot(wipt.prediction)
 
 #ncell(wipt.prediction)
 
