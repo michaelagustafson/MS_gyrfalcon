@@ -210,8 +210,8 @@ a7
 ## TIME-REMOVAL MODEL
 WIPT sample size: 516 individuals counted
 ```{r trframe}
-#all.env.scaled2 <- read.csv(here("output/all.env.scaled_22Aug22.csv"))
-#all.env.scaled2 <- all.env.scaled2[,-c(1)]
+all.env.scaled2 <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all.env.scaled_06Oct23.csv")
+all.env.scaled2 <- all.env.scaled2[,-c(1)]
 
 wipt.env.join <- left_join(wipt.wide, all.env.scaled2)
 head(wipt.env.join); dim(wipt.env.join)
@@ -223,7 +223,7 @@ wipt.env.join$year <- as.factor(wipt.env.join$year)
 colnames(wipt.env.join)
 
 timeints <- wipt.env.join[,c(2:6)]
-siCovs <- wipt.env.join[,c(7:32)]
+siCovs <- wipt.env.join[,c(7:31)]
 area <- pi*400^2/10000
 
 wiptFrame2 <- unmarkedFrameMPois(
