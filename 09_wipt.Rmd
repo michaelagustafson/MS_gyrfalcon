@@ -462,6 +462,8 @@ names(pred.surface) <- c("tundra", "tussock", "allshrub", "elev", "area", "julia
 
 wipt.prediction <- predict(nbm1, type="lambda", newdata=pred.surface)
 
+cellStats(wipt.prediction, 'mean')
+cellStats(wipt.prediction, 'median')
 plot(wipt.prediction)
 
 #ncell(wipt.prediction)
