@@ -698,6 +698,7 @@ plot(sq.prediction)
 
 #ncell(sq.prediction) # 169556 cells in raster
 cellStats(sq.prediction, 'mean')
+cellStats(sq.prediction, 'median')
 
 #calculate mean density and confidence intervals:
 

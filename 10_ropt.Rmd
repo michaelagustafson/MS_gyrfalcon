@@ -165,7 +165,7 @@ sum(ropt.wide[,2:6])
 
 
 write.csv(ropt.wide, here("output/ropt_wide_22aug22.csv"))
-ropt.wide <- read.csv(here("output/ropt_wide_22aug22.csv"))
+ropt.wide <- read.csv("E:/gyrf_analysis/gyrf3/output/ropt_wide_22aug22.csv")
 ropt.wide <- ropt.wide[,-c(1)]
 
 ```
@@ -519,13 +519,13 @@ tundra.s <- (tundra-0.1608737)/0.08171017
 # add detection covariates (standardized mean values)
 
 jul.raster <- elev 
-values(jul.raster) <- mean(all.env.scaled$julian)
+values(jul.raster) <- mean(all.env.scaled2$julian)
 
 wind.raster <- elev 
-values(wind.raster) <- mean(all.env.scaled$wind)
+values(wind.raster) <- mean(all.env.scaled2$wind)
 
 minsun.raster <- elev 
-values(minsun.raster) <- mean(all.env.scaled$min_after_sun)
+values(minsun.raster) <- mean(all.env.scaled2$min_after_sun)
 
 obs.raster <- elev 
 values(obs.raster) <- as.factor("DS")
@@ -539,6 +539,11 @@ names(pred.surface) <- c("elev", "lowshrub", "sparseveg", "tundra", "area", "jul
 
 
 ropt.prediction <- predict(nbm1, type='lambda', newdata=pred.surface)
+
+cellStats(ropt.prediction, 'mean')
+cellStats(ropt.prediction, 'median')
+
+
 plot(ropt.prediction)
 
 #ropt.freq <- freq(ropt.prediction, digits = 2)
