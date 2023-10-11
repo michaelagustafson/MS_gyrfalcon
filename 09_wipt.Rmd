@@ -491,6 +491,7 @@ pred.surface4 <- stack(tundra.s, tussock.s, tallshrub.s, elev.s, area.raster, ju
 names(pred.surface4) <- c("tundra", "tussock", "tallshrub", "elev", "area", "julian", "wind", "min_after_sun", "observer")
 
 wipt.prediction <- predict(nbm1, type="lambda", newdata=pred.surface)
+cellStats(wipt.prediction, 'sum')
 
 wipt.prediction4 <- predict(nbm4, type="lambda", newdata=pred.surface4)
 
