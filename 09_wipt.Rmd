@@ -265,6 +265,25 @@ nbm1 <- gmultmix(
 
 summary(nbm1)
 
+nbm4 <- gmultmix(
+  #abundance
+  ~ 1 + tundra + tussock + tallshrub + elev + offset(log(area)), 
+  ~1 ,
+  ~ 1 + julian + min_after_sun + wind + observer,
+    mixture = "NB",
+  umf.nb, engine="R" )
+
+summary(nbm4)
+
+nbm5 <- gmultmix(
+  #abundance
+  ~ 1 + tundra + tussock + tallshrub + openshrub + elev + offset(log(area)), 
+  ~1 ,
+  ~ 1 + julian + min_after_sun + wind + observer,
+    mixture = "NB",
+  umf.nb, engine="R" )
+
+summary(nbm5)
 #rerun the Poisson model for model comparison
 nbm2 <- gmultmix(
   #abundance
@@ -392,6 +411,8 @@ openshrub <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rast
 tallshrub <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tallshrub.tif")
 tundra <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tundra.tif")
 tussock <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tussock.tif")
+tallshrub <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tallshrub.tif")
+
 
 #elev <- raster("E:/gyrf_analysis/gyrf3/output/dem_400.tif")
 #lowshrub <- raster("E:/gyrf_analysis/gyrf3/prediction surfaces 17Aug/lowshrub.tif")
@@ -433,6 +454,13 @@ cellStats(tussock, sd) #0.08615176
 
 tussock.s <- (tussock-0.1202638)/0.08615176
 
+
+cellStats(tallshrub, mean)
+cellStats(tallshrub, sd)
+
+tallshrub.s <- (tallshrub - 0.1321896)/0.07754615
+
+
 #elev.s <- (elev-180)/103
 #tundra.s <- (tundra-0.573)/0.305
 #tussock.s <- (tussock-0.0632)/0.104
@@ -458,9 +486,16 @@ pred.surface <- stack(tundra.s, tussock.s, allshrub.s, elev.s, area.raster, jul.
 
 names(pred.surface) <- c("tundra", "tussock", "allshrub", "elev", "area", "julian", "wind", "min_after_sun", "observer")
 
+pred.surface4 <- stack(tundra.s, tussock.s, tallshrub.s, elev.s, area.raster, jul.raster, wind.raster, minsun.raster, obs.raster)
 
+names(pred.surface4) <- c("tundra", "tussock", "tallshrub", "elev", "area", "julian", "wind", "min_after_sun", "observer")
 
 wipt.prediction <- predict(nbm1, type="lambda", newdata=pred.surface)
+
+wipt.prediction4 <- predict(nbm4, type="lambda", newdata=pred.surface4)
+
+plot(wipt.prediction4)
+cellStats(wipt.prediction4, 'sum')
 
 cellStats(wipt.prediction, 'mean')
 cellStats(wipt.prediction, 'median')
