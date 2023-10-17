@@ -1,0 +1,55 @@
+---
+title: "01_cleaning"
+format: html
+editor: visual
+---
+
+## 01_Cleaning and Checking
+
+This document is the first in my final version of code for my Master's thesis work. This includes cleaning of the code and preparing it for a distance removal sampling model gdistremoval().
+
+## Setup
+
+Clear workspace
+
+```{r clear space}
+
+# Clean your workspace to reset your R environment
+rm( list = ls() )
+# Check that you are in the right project folder
+getwd()
+```
+
+Load relevant library
+
+```{r library}
+
+library(dplyr)
+library(lubridate)
+library(tidyr)
+library(hms)
+library(stringr)
+
+
+```
+
+## Import data
+
+Import point count observation data
+
+```{r import data}
+
+# 2019 observation data from point counts
+obs19 <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/data/Point_Count_Obs_2019_MG_cleaned.csv")
+# manually inspect
+
+
+# 2021 observation data from point counts
+obs21 <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/data/Point_Count_Obs_2021_MG.csv")
+#manually inspect
+
+
+# 2022 observation data from point counts
+obs22 <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/data/obs22.csv")
+#manually inspect
+```
