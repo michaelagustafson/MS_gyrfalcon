@@ -326,9 +326,8 @@ Afterthought: I probably could have just kept this as start time? LOL
 
     ```
 
-```{=html}
 <!-- -->
-```
+
 2.  Change format of survey times in environmental data
 
     ```{r format start time}
@@ -700,7 +699,7 @@ obs22.filter2 <- dplyr::filter(obs22.filter, flyover != "Y" | display == "Y")
 
     ```
 
-    ## Check for missing data 
+    ## Check for missing data
 
     ```{r missing data}
 
@@ -775,4 +774,107 @@ Okayyyyyyy. Now that that's all figured out.
 ```{r}
 write.csv(all.obs4, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_obs_17Oct23.csv")
 write.csv(all.env, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_env_17Oct23.csv")
+```
+
+Now save and close, then reopen to clear workspace and data usage. We'll reload the final obs and env data sets to continue.
+
+## Add habitat data to environmental data
+
+I calculated and extracted the percentage of each habitat type within a 400m radius of each survey point. I will now join that data to its corresponding point.
+
+```{r add habitat}
+
+all.obs4 <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_obs_17Oct23.csv") 
+all.env <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_env_17Oct23.csv") 
+lc.vars <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/pland2_400r.csv") #these are the land cover characteristics and elevation we extracted in the previous code 
+
+# remove extra 'X' column from all.obs and site.vars
+all.obs4 <- all.obs4[,-c(1)]
+all.env <- all.env[,-c(1)]
+lc.vars <- lc.vars[,-c(1)]
+
+# fix that one council site that's name is always messed up
+
+lc.vars[8,1] <- "COUN_3_12_4"
+
+# and the temperature that's missing
+
+all.env[552,6] <- "42"
+
+
+all.env2 <- left_join(lc.vars, all.env, by = 'id')
+
+write.csv(all.env2, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_env_join_18Oct23.csv")
+```
+
+## Remove female ptarmigan
+
+```{r remove females}
+
+wipt.male <- data.frame(all.obs4)
+
+# change all species codes of SQUIR to a 1 and all other species to 0
+wipt.male$species[wipt.male$species == "WIPT"] <- 1
+
+wipt.male$species[wipt.male$species != "1"] <- 0
+
+# change count to 0 for non SQUIR
+wipt.male$count[wipt.male$species == 0] <- 0
+
+# now to change counts for those obs that were females
+
+unique(wipt.male$sex[wipt.male$species == 1])
+
+# looking at original data notes for M/F sex to know exact number of males and females
+
+wipt.male[3135, 10] = "MMMF"
+wipt.male[3137, 10] = "MMF"
+
+wipt.male$sex[wipt.male$sex == "M,F"] <- "MF"
+wipt.male$sex[wipt.male$sex == "F,M"] <- "MF"
+wipt.male$sex[wipt.male$sex == "M,2U"] <- "MUU"
+
+
+#remove single F and single U
+
+wipt.male$species[wipt.male$sex == "F"] <- 0
+wipt.male$species[wipt.male$sex == "U"] <- 0
+
+wipt.male$count <- as.numeric(wipt.male$count)
+wipt.male$sex <- as.factor(wipt.male$sex)
+
+#MF
+wipt.male$count[wipt.male$species == 1 & wipt.male$sex == "MF"] <- wipt.male$count[wipt.male$species == 1 &wipt.male$sex == "MF"] - 1
+
+#MMF
+wipt.male$count[wipt.male$species == 1 & wipt.male$sex == "MMF"] <- wipt.male$count[wipt.male$species == 1 &wipt.male$sex == "MMF"] - 1
+
+#MMMF
+wipt.male$count[wipt.male$species == 1 & wipt.male$sex == "MMMF"] <- wipt.male$count[wipt.male$species == 1 &wipt.male$sex == "MMMF"] - 1
+
+#MUU
+wipt.male$count[wipt.male$species == 1 & wipt.male$sex == "MUU"] <- wipt.male$count[wipt.male$species == 1 &wipt.male$sex == "MUU"] - 2
+
+wipt.male$count[wipt.male$species == 0] <- 0
+
+# check for na values
+sum(is.na(wipt.male$time_int))
+#fix - this was a site where no species were detected
+wipt.male[7991, 4] <- 0
+# check again
+sum(is.na(wipt.male$time_int))
+
+# change time intervals to reflect intervals of 2 minutes
+wipt.male2 <- mutate(wipt.male, 
+                time_int = ifelse(wipt.male$time_int %in% 0:1, "1", 
+                                  ifelse(wipt.male$time_int %in% 2:3, "2", 
+                                         ifelse(wipt.male$time_int %in% 4:5, "3",
+                                                ifelse(wipt.male$time_int %in% 6:7, "4",
+                                                       ifelse(wipt.male$time_int %in% 8:9, "5", "NA"))))))
+
+# look at sample size
+
+wipt.male2$count <- as.integer(wipt.male2$count)
+sum(wipt.male2$count) # sample size 485
+
 ```
