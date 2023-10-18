@@ -769,3 +769,10 @@ missing.check6 <- anti_join(all.env, all.obs4, by = 'id')
 ```
 
 Okayyyyyyy. Now that that's all figured out.
+
+## SAVE
+
+```{r}
+write.csv(all.obs4, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_obs_17Oct23.csv")
+write.csv(all.env, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_env_17Oct23.csv")
+```
