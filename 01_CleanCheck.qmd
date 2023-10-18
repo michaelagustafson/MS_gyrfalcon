@@ -893,40 +893,49 @@ wipt.male22 <- subset(wipt.male2, year == "2022" & wipt.male2$count > 0)
 sum(wipt.male22$count) # 9 obs in 2022
 unique(wipt.male22$id) # 5 sites in 22
 
-str(wipt.male2)
 
+
+str(wipt.male2)
 wipt.male2$id <- as.factor(wipt.male2$id)
 wipt.male2$time_int <- as.factor(wipt.male2$time_int)
+wipt.male2$exact_distance <- as.factor(wipt.male2$exact_distance)
 wipt.male2$count <- as.integer(wipt.male2$count)
 
-wipt.male.agg <- aggregate(x = wipt.male2$count, 
-                      by = list(wipt.male2$id, wipt.male2$time_int), 
-                      FUN = sum)
+wipt.male.agg2 <- aggregate(x = wipt.male2$count, 
+                      by = list(wipt.male2$id, wipt.male2$time_int, 
+                                wipt.male2$exact_distance), 
+                       
+                      FUN = sum,
+                      na.action=NULL)
 
-names(wipt.male.agg)[names(wipt.male.agg) == "Group.1"] <- "id"
-names(wipt.male.agg)[names(wipt.male.agg) == "Group.2"] <- "time_int"
-names(wipt.male.agg)[names(wipt.male.agg) == "x"] <- "count"
+names(wipt.male.agg2)[names(wipt.male.agg2) == "Group.1"] <- "id"
+names(wipt.male.agg2)[names(wipt.male.agg2) == "Group.2"] <- "time_int"
+names(wipt.male.agg2)[names(wipt.male.agg2) == "Group.3"] <- "exact_distance"
+names(wipt.male.agg2)[names(wipt.male.agg2) == "x"] <- "count"
+
+
+sum(wipt.male.agg2$count)
 
 # checks for missing data
 
 all.env2$id <- as.factor(all.env2$id)
-miss1 <- anti_join(all.env2, wipt.male.agg) # clear
-miss2 <- anti_join(wipt.male.agg, all.env2) # clear
+miss1 <- anti_join(all.env2, wipt.male.agg2, by = 'id') # clear
+miss2 <- anti_join(wipt.male.agg2, all.env2, by = 'id') # clear
 
 # nothing missing! 
 
 
 # spread dataframes:
 
-unique(wipt.male.agg$id) # should end up with 988 levels
+unique(wipt.male.agg2$id) # should end up with 988 levels
 
-wipt.male.wide <- wipt.male.agg %>%
-  dplyr::select(id, time_int, count) %>%
+wipt.male.wide <- wipt.male.agg2 %>%
+  dplyr::select(id, time_int, count, exact_distance) %>%
   spread(key = time_int, value = count, fill = 0)
 
 # double check that sample size is still 485
-sum(wipt.male.wide[,c(2:6)]) # sweet! good to go
-
+sum(wipt.male.wide[,c(3:7)]) 
+unique(wipt.male.wide$id)
 #write.csv(wipt.male.wide, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_wide_18Oct23.csv")
 
 
@@ -998,9 +1007,11 @@ cor.mat
 
 all.env.scaled$year <- as.factor(all.env.scaled$year)
 
-wipt.male.env.join <- left_join(wipt.male.wide, all.env.scaled)
+wipt.male.env.join2 <- left_join(wipt.male.wide, all.env.scaled)
 head(wipt.male.env.join); dim(wipt.male.env.join)
 str(wipt.male.env.join)
 
-write.csv(wipt.male.env.join, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_df_18Oct23.csv")
+
+
+write.csv(wipt.male.env.join, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_df_timeanddist_18Oct23.csv")
 ```
