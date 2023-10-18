@@ -612,3 +612,160 @@ obs22.filter2 <- dplyr::filter(obs22.filter, flyover != "Y" | display == "Y")
 
 
 ```
+
+## Combine all years
+
+1.  Reorder and subset data
+
+    ```{r subset}
+    #2019
+    # first need to create a display column for 2019 
+    #but this wasn't a thing recorded in 2019 so all values will be 'NA'
+    obs.19.dist$display <- "NA"
+
+
+    #reorder columns and getting rid of unnecessary columns so dataframes match
+    colnames(obs.19.dist)
+
+    # the order is going to be: id, road, unit, transect, point, year, date, species, time_int, sight_angle, exact_distance, dist_cat, flyover, display, sex, detection_type, count, notes
+
+    obs.19.dist <- obs.19.dist[c(17, 1:12, 18, 13:16)]
+    head(obs.19.dist)
+
+    # 2022
+    colnames(obs.21.dist)
+    obs.21.dist <- obs.21.dist[c(18, 1:17)]
+    head(obs.21.dist)
+
+
+    #2022
+    colnames(obs22.filter2)
+    obs22.filter2 <- obs22.filter2[c(5, 1:4, 7, 6, 8:13, 15, 14, 16:18)]
+    head(obs22.filter2)
+
+    # change names of 2022 columns to match
+
+
+    obs22.filter2 <- obs22.filter2 %>% 
+            rename("sight_angle" = "bearing",
+                   "exact_distance" = "distance",
+                   "detection_type" = "detect_type")
+
+    # now append tables together
+
+    all.obs <- rbind(obs.19.dist, obs.21.dist, obs22.filter2)
+
+
+    head(all.obs)
+
+
+
+    # Environmental
+
+    #subset these
+    colnames(env19)
+
+    env19.subset <- env19[c(30, 5:8, 12, 14, 15, 16, 17, 18:29, 31, 33:34 )]
+
+    colnames(env21)
+    env21.subset <- env21[c(30, 5:8, 12, 14, 15, 16, 17, 18:29, 31, 33:34)]
+
+    colnames(env21.subset)
+    colnames(env22)
+    env22.subset <- env22[c(5, 8, 9, 6, 15, 19, 20, 22, 23, 21, 24, 25, 11, 10, 12, 13, 29, 26, 27, 28, 30, 31, 33)]
+
+
+    env22.subset2 <- env22.subset[c(1:8, 10:12, 22:23)]
+    env22.subset2$year <- "2022"
+
+
+    colnames(env19.subset)
+    env19.subset2 <- env19.subset[c(1:11, 23:25)]
+
+    colnames(env21.subset)
+    env21.subset2 <- env21.subset[c(1:8, 10:12, 23:25)]
+
+    # fix names for 22 data
+
+    env22.subset2 <- env22.subset2 %>% 
+            rename("observer" = "prim_obs",
+                   "second_observer" = "sec_obs",
+                   "noise_distance_m" = "noise_dist",
+                   "noise_direction" = "noise_dir",
+                   "wind" = "wind_sp")
+
+    all.env <- rbind(env19.subset2, env21.subset2, env22.subset2)
+
+
+
+    ```
+
+    ## Check for missing data 
+
+    ```{r missing data}
+
+
+    missing.id1 <- anti_join(all.env, all.obs, by = 'id')
+    missing.id2 <- anti_join(all.obs, all.env, by = 'id')
+
+
+    ## misspelled?
+    #COUN_3_12_4
+
+    # fix spelling error:
+
+    all.env$id[all.env$id == 'COUN _3_12_4'] <- 'COUN_3_12_4'
+    all.obs$id[all.obs$id == 'COUN _3_12_4'] <- 'COUN_3_12_4'
+
+
+
+    # read in .csv
+    missing.obs <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/data/missing_obs.csv")
+
+    head(missing.obs)
+
+    missing.obs <- missing.obs %>% 
+            rename("exact_distance" = "distance")
+    missing.obs$sex <- "U"
+
+
+    all.obs2 <- subset(all.obs, select = c(1, 6, 8:9, 11:13, 17, 14, 15))
+
+
+    # append to 'all.obs'
+    all.obs3 <- rbind(all.obs2, missing.obs)
+
+    ### Final check for missing data:
+
+    missing.check3 <- anti_join(all.obs3, all.env, by = 'id')
+    missing.check4 <- anti_join(all.env, all.obs3, by = 'id')
+
+    # nothing missing now!
+    ```
+
+Okay looks like there is environmental data for K4_T22_09 but no observational data - will double check original dataframe to confirm this is because no species were detected or species that were detected were filtered out because of distance.
+
+Okay, it was because 'NO SPECIES DETECTED' for this point. Will need to add that row back in
+
+```{r}
+obs22.missing <- obs22[8,]
+# subset to final columns in dataframe
+
+obs22.missing <- obs22.missing[,c(5, 7:9, 11:13, 17, 15, 14)]
+
+#change names
+obs22.missing <- obs22.missing %>% 
+        rename("exact_distance" = "distance")
+
+#now add back to all.obs
+
+
+all.obs4 <- rbind(all.obs3, obs22.missing)
+
+
+#check again
+missing.check5 <- anti_join(all.obs4, all.env, by = 'id')
+missing.check6 <- anti_join(all.env, all.obs4, by = 'id')
+```
+
+Okayyyyyyy. Now that that's all figured out.
