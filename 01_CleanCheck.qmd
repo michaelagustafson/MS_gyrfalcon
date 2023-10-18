@@ -853,7 +853,7 @@ wipt.male$count[wipt.male$species == 1 & wipt.male$sex == "MMF"] <- wipt.male$co
 wipt.male$count[wipt.male$species == 1 & wipt.male$sex == "MMMF"] <- wipt.male$count[wipt.male$species == 1 &wipt.male$sex == "MMMF"] - 1
 
 #MUU
-wipt.male$count[wipt.male$species == 1 & wipt.male$sex == "MUU"] <- wipt.male$count[wipt.male$species == 1 &wipt.male$sex == "MUU"] - 2
+wipt.male$count[wipt.male$species == 1 & wipt.male$sex == "MUU"] <- wipt.male$count[wipt.male$species == 1 & wipt.male$sex == "MUU"] - 2
 
 wipt.male$count[wipt.male$species == 0] <- 0
 
@@ -876,5 +876,115 @@ wipt.male2 <- mutate(wipt.male,
 
 wipt.male2$count <- as.integer(wipt.male2$count)
 sum(wipt.male2$count) # sample size 485
+
+
+
+# get number of sites with counts each year
+wipt.male19 <- subset(wipt.male2, year == "2019" & wipt.male2$count > 0)
+sum(wipt.male19$count) # 239 obs in 2019
+list(unique(wipt.male19$id)) # 118 sites in 19
+
+wipt.male21 <- subset(wipt.male2, year == "2021" & wipt.male2$count > 0)
+sum(wipt.male21$count) # 237 obs in 2021
+unique(wipt.male21$id) # 127 sites in 21
+
+wipt.male22 <- subset(wipt.male2, year == "2022" & wipt.male2$count > 0)
+sum(wipt.male22$count) # 9 obs in 2022
+unique(wipt.male22$id) # 5 sites in 22
+
+str(wipt.male2)
+
+wipt.male2$id <- as.factor(wipt.male2$id)
+wipt.male2$time_int <- as.factor(wipt.male2$time_int)
+wipt.male2$count <- as.integer(wipt.male2$count)
+
+wipt.male.agg <- aggregate(x = wipt.male2$count, 
+                      by = list(wipt.male2$id, wipt.male2$time_int), 
+                      FUN = sum)
+
+names(wipt.male.agg)[names(wipt.male.agg) == "Group.1"] <- "id"
+names(wipt.male.agg)[names(wipt.male.agg) == "Group.2"] <- "time_int"
+names(wipt.male.agg)[names(wipt.male.agg) == "x"] <- "count"
+
+# checks for missing data
+
+all.env2$id <- as.factor(all.env2$id)
+miss1 <- anti_join(all.env2, wipt.male.agg) # clear
+miss2 <- anti_join(wipt.male.agg, all.env2) # clear
+
+# nothing missing! 
+
+
+# spread dataframes:
+
+unique(wipt.male.agg$id) # should end up with 988 levels
+
+wipt.male.wide <- wipt.male.agg %>%
+  dplyr::select(id, time_int, count) %>%
+  spread(key = time_int, value = count, fill = 0)
+
+# double check that sample size is still 485
+sum(wipt.male.wide[,c(2:6)]) # sweet! good to go
+
+#write.csv(wipt.male.wide, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_wide_18Oct23.csv")
+
+
+
+
+```
+
+## Scale numerical predictors
+
+```{r}
+# scale numerical predictors
+
+str(all.env2)
+
+jul.scaled <- scale(as.numeric(all.env2$julian))
+min.scaled <- scale(as.numeric(all.env2$min_after_sun))
+temp.scaled <- scale(as.numeric(all.env2$tempf))
+wind.scaled <- scale(all.env2$wind)
+t.scaled <- scale(all.env2$tundra)
+tuss.scaled <- scale(all.env2$tussock)
+ls.scaled <- scale(all.env2$lowshrub)
+ts.scaled <- scale(all.env2$tallshrub)
+os.scaled <- scale(all.env2$openshrub)
+b.scaled <- scale(all.env2$barren)
+spveg.scaled <- scale(all.env2$sparseveg)
+elev.scaled <- scale(all.env2$elev)
+egfor.scaled <- scale(all.env2$egforest)
+dec.scaled <- scale(all.env2$decforest)
+mix.scaled <- scale(all.env2$mixforest)
+wood.scaled <- scale(all.env2$woodland)
+fen.scaled <- scale(all.env2$fen)
+litt.scaled <- scale(all.env2$littoral)
+wat.scaled <- scale(all.env2$water)
+
+
+# create scaled dataframe
+all.env.scaled <- data.frame(all.env2)
+
+# replace variables with scaled ones
+all.env.scaled$julian <- jul.scaled
+all.env.scaled$min_after_sun <- min.scaled
+all.env.scaled$tempf <- temp.scaled
+all.env.scaled$wind <- wind.scaled
+all.env.scaled$tundra <- t.scaled
+all.env.scaled$tussock <- tuss.scaled
+all.env.scaled$lowshrub <- ls.scaled
+all.env.scaled$tallshrub <- ts.scaled
+all.env.scaled$openshrub <- os.scaled
+all.env.scaled$barren <- b.scaled
+all.env.scaled$sparseveg <- spveg.scaled
+all.env.scaled$elev <- elev.scaled
+all.env.scaled$egforest <- egfor.scaled
+all.env.scaled$decforest <- dec.scaled
+all.env.scaled$mixforest <- mix.scaled
+all.env.scaled$woodland <- wood.scaled
+all.env.scaled$fen <- fen.scaled
+all.env.scaled$littoral <- litt.scaled
+all.env.scaled$water <- wat.scaled
+
+
 
 ```
