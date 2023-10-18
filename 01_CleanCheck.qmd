@@ -35,9 +35,11 @@ library(stringr)
 
 ## Import data
 
+### Count Data
+
 Import point count observation data
 
-```{r import data}
+```{r obs data}
 
 # 2019 observation data from point counts
 obs19 <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/data/Point_Count_Obs_2019_MG_cleaned.csv")
@@ -52,4 +54,561 @@ obs21 <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/data/Point_Count_Obs
 # 2022 observation data from point counts
 obs22 <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/data/obs22.csv")
 #manually inspect
+```
+
+### Environmental Data
+
+This is info like what point id, road, etc. wind speed, temp, veg
+
+```{r env data}
+
+
+# 2019 environmental data for all surveyed points
+env19 <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/data/Point_Count_Env_2019_MG_cleaned.csv")
+#manually inspect
+
+# 2021 environmental data for all surveyed points
+env21 <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/data/Point_Count_Env_2021_MG.csv")
+
+# 2022 environmental data for all surveyed points
+env22 <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/data/env22.csv")
+
+#manually inspect all
+```
+
+## Cleanup
+
+We can see in the Global Environment that we've ended up with thousands of extra rows in the 2019 observations data. This was some formatting error in the Excel sheets that I couldn't fix. We'll clean that up here.
+
+```{r extra rows}
+
+obs19 <- obs19 %>% dplyr::filter(!(Road_ID==""))
+
+```
+
+Okay, that looks better.
+
+### Create a uniform identity key
+
+```{r create identity key}
+## 2019 Environment:
+env19$Identity <- paste(env19$Road_ID, 
+                             env19$UNIT_ID, 
+                             env19$Transect_ID, 
+                             env19$Point_ID, 
+                             sep = "_")
+
+# check
+head(env19)
+
+# 2019 Observations:
+obs19$Identity <- paste(obs19$Road_ID, 
+                             obs19$UNIT_ID, 
+                             obs19$Transect_ID, 
+                             obs19$Point_ID, 
+                             sep = "_")
+
+# check
+head(obs19)
+
+# 2021 Environment:
+env21$Identity <- paste(env21$ROAD_ID,
+                             env21$UNIT_ID,
+                             env21$TRANSECT_ID,
+                             env21$POINT_ID,
+                             sep = "_")
+
+#check
+head(env21)
+
+# 2021 Observations:
+obs21$Identity <- paste(obs21$ROAD_ID,
+                             obs21$UNIT_ID,
+                             obs21$TRANSECT_ID,
+                             obs21$POINT_ID,
+                             sep = "_")
+
+#check
+head(obs21)
+
+
+#2022 already has one labeled 'id' 
+```
+
+### Change column names
+
+Change column names of 2019 and 2021 data to match 2022
+
+```{r change column names}
+
+### 2019 Observations
+
+# check column names
+colnames(obs19)
+
+#create vector of old names
+oldnames.obs19 = c("Road_ID", "UNIT_ID", "Transect_ID", "Point_ID", 
+                   "Year", "Date", "Species_Alpha_Code", "Time_Interval", 
+                   "Sighting_angle", "Exact_Distance", "Distance_category",
+                   "Flyover2", "Sex", "Detection_Type", "Group.size", "Notes",
+                   "Identity")
+
+# create vector of new names
+newnames.obs19 = c("road", "unit", "transect", "point", "year", "date", 
+                   "species", "time_int", "sight_angle", "exact_distance",
+                   "dist_cat", "flyover", "sex", "detection_type", "count",
+                   "notes", "id")
+
+
+# run a for loop that replaces names matching those in the old names with new names
+for(i in 1:ncol(obs19)) names(obs19)[names(obs19) == oldnames.obs19[i]] = newnames.obs19[i]
+
+#check
+colnames(obs19)
+
+
+### 2019 Environmental
+
+# check column names
+colnames(env19)
+
+#create vector of old names
+oldnames.env19 = c("Road_ID", "UNIT_ID", "Transect_ID", "Point_ID",
+                   "Prim_Obs_initials","Sec_Obs_Initials", "Date", "start_time",
+                   "Temp_F", "Temp_Celsius", "Sky", "Wind", "Hearing",
+                   "Noise_Distance_m", "Noise_Direction",
+                   "Waypoint_num", "GPS_name", "Coordinates", "Lat", "Long",
+                   "pct_BG", "pct_T", "pct_LS", "pct_TS", "pct_sum", "Notes",
+                   "Identity")
+
+# create vector of new names
+newnames.env19 = c("road", "unit", "transect", "point", "observer",
+                   "second_observer", "date", "start_time", "tempf", "tempc",
+                   "sky", "wind", "hear", "noise_distance_m", "noise_direction",
+                   "waypoint_num", "gps_name", "coordinates", "lat", "lon",
+                   "pct_bg", "pct_t", "pct_ls", "pct_ts", 'pct_sum', "notes", "id")
+
+# run a for loop that replaces names matching those in the old names with new names
+for(i in 1:ncol(env19)) names(env19)[names(env19) == oldnames.env19[i]] = newnames.env19[i]
+
+#check 
+head(env19)
+
+
+### 2021 Observations
+
+colnames(obs21)
+
+oldnames.obs21 = c("ROAD_ID", "UNIT_ID", "TRANSECT_ID", "POINT_ID",
+                   "SURVEY_YEAR", "SURVEY_DATE", "SPECIES_ALPHA_CODE",
+                   "TIME_INTERVAL", "SIGHTING_ANGLE", "EXACT_DISTANCE",
+                   "DISTANCE_CATEGORY", "FLYOVER", "DISPLAY.USING.AREA", "SEX",
+                   "DETECTION_TYPE", "GROUP_SIZE", "NOTES", "Identity")
+
+newnames.obs21 = c("road", "unit", "transect", "point", "year", "date",
+                   "species", "time_int", "sight_angle", "exact_distance",
+                   "dist_cat", "flyover", "display", "sex", "detection_type",
+                   "count", "notes", "id")
+
+for(i in 1:ncol(obs21)) names(obs21)[names(obs21) == oldnames.obs21[i]] = newnames.obs21[i]
+
+head(obs21)
+
+### 2021 Environmental
+
+colnames(env21)
+
+oldnames.env21 = c("ROAD_ID","UNIT_ID","TRANSECT_ID","POINT_ID","PRIM_OBS", "SEC_OBS","SURVEY_DATE","START_TIME","TEMP_F","TEMP_C" ,"SKY","WIND","WIND_DIRECTION","HEARING","NOISE_DISTANCE_m", "NOISE_DIRECTION","WAYPOINT","GPS_NAME","UTM1","UTM2","ELEVATION","pct_BG", "pct_T","pct_LS","pct_TS","NOTES","Identity")
+
+newnames.env21 = c("road", "unit", "transect", "point", "observer", "second_observer", "date", "start_time", "tempf", "temp_c", "sky", "wind","wind_direction", "hear", "noise_distance_m", "noise_direction", "waypoint", "gps_name", "utm1", "utm2", "elevation", "pct_bg", "pct_t", "pct_ls", "pct_ts", "notes","id")
+
+
+for(i in 1:ncol(env21)) names(env21)[names(env21) == oldnames.env21[i]] = newnames.env21[i]
+
+head(env21)
+
+```
+
+### Add Julian date
+
+-   Format 'Date' column as a Date
+-   Found out that need to change the date from full -2019 to -19 for the year to not convert to 2020 when change to a Date format
+
+```{r}
+## 2019 
+
+env19$date <- gsub("-2019", "-19", env19$date)
+
+env19$date <- base::as.Date(env19$date, 
+                                 format = "%d-%b-%y")
+#check that the structure is 'Date'
+str(env19)
+
+# create Julian date column and convert dates:
+env19$julian <- base::as.POSIXlt(env19$date, 
+                                      format ='%d%b%y')$yday +1
+#check
+head(env19)
+
+
+## 2021 
+
+# One row has the wrong year - this was discovered further on in the code but ammended here
+colnames(env21)
+env21$date <- gsub("-19", "-21", env21$date)
+
+# format 'Date column as Date
+env21$date <- base::as.Date(env21$date, 
+                                        format = "%d-%b-%y")
+#check that the structure is 'Date'
+str(env21)
+
+# create Julian date column and convert dates:
+env21$julian <- base::as.POSIXlt(env21$date, 
+                                      format = '%d%b%y')$yday +1
+#check
+head(env21)
+
+## 2022
+env22$date <- base::as.Date(env22$date)
+#check that structure is 'Date'
+str(env22)
+
+# create Julian date column and convert dates:
+env22$julian <- base::as.POSIXlt(env22$date, 
+                                      format ='%d%b%y')$yday +1
+#check
+head(env22)
+```
+
+### Add sunrise times
+
+Afterthought: I probably could have just kept this as start time? LOL
+
+1.  Need to format survey time to be in format of 00:00:00 (h:m:s) in order to calculate how many minutes after sunrise a survey began
+
+    ```{r sunrise times}
+
+    # 2019
+    sunrise19 <- read.csv("E:/gyrf_analysis/gyrf3/output/nome_sun19_final.csv")
+    # only keep necessary columns
+    sunrise19 <- sunrise19[c(2:3)]
+
+    # change date to 'Date' format
+    sunrise19$date <- base::as.Date(sunrise19$date, 
+                                    format = "%d-%b-%y")
+    # change our time format to hour:min:sec
+    sunrise19$sunrise <- hms::as_hms(sunrise19$sunrise)
+
+
+    # 2021
+    sunrise21 <- read.csv("E:/gyrf_analysis/gyrf3/output/nome_sun21_final.csv")
+    # only keep necessary columns
+    sunrise21 <- sunrise21[c(2:3)]
+
+    # change date to 'Date' format
+    sunrise21$date <- base::as.Date(sunrise21$date, 
+                                    format = "%d-%b-%y")
+    # change our time format to hour:min:sec
+    sunrise21$sunrise <- hms::as_hms(sunrise21$sunrise)
+
+    #2022
+
+    sunrise22 <- read.csv("E:/gyrf_analysis/gyrf3/output/nome_sun22_final.csv")
+    # only keep necessary columns
+    sunrise22 <- sunrise22[c(2:3)]
+
+    # change date to 'Date' format
+    sunrise22$date <- base::as.Date(sunrise22$date)
+
+    # change our time format to hour:min:sec
+    sunrise22$sunrise <- hms::as_hms(sunrise22$sunrise)
+
+    ```
+
+```{=html}
+<!-- -->
+```
+2.  Change format of survey times in environmental data
+
+    ```{r format start time}
+    ### 2019 
+
+    # remove ':' that's already in there
+    env19$start_time <- str_replace(env19$start_time, '[:]', '')
+
+    # through trial and error need to change str to integer
+    env19$start_time <- as.integer(env19$start_time)
+
+    # add 00 to end
+    env19$start_time <- base::paste0(env19$start_time, "00") 
+
+    # add leading 0
+    env19$start_time <- sprintf("%06d", as.numeric(env19$start_time))
+
+    # separate sunrise times into columns for h:m:s
+    env19 <- tidyr::extract(env19, 
+                                 start_time, 
+                                 into = c("hr", "min", "sec"), 
+                                 "(.{2})(.{2})(.{2})", 
+                                 remove = FALSE)
+
+    # paste h:m:s column together into another column and separate with ':'
+    env19$start_time <- base::paste(env19$hr, 
+                                         env19$min, 
+                                         env19$sec, 
+                                         sep = ":")
+
+    # format column so that R recognizes it as time
+    env19$start_time <- hms::as_hms(env19$start_time)
+
+    #check structure
+    str(env19$start_time)
+
+
+
+    ### 2021 
+
+    env21$start_time <- stringr::str_replace(env21$start_time, '[:]', '')
+
+    # through trial and error need to change str to integer
+    env21$start_time <- as.integer(env21$start_time)
+
+    env21$start_time <- base::paste0(env21$start_time, "00") #adds 00 to end
+
+    env21$start_time <- base::sprintf("%06d", as.numeric(env21$start_time)) #adds leading 0
+
+    # separate sunrise times into columns for h:m:s
+
+    env21 <- tidyr::extract(env21, 
+                                 start_time, 
+                                 into = c("hr", "min", "sec"), 
+                                 "(.{2})(.{2})(.{2})", 
+                                 remove = FALSE)
+
+    # paste h:m:s column together into another column and separate with ':'
+
+    env21$start_time <- base::paste(env21$hr, 
+                                         env21$min, 
+                                         env21$sec, 
+                                         sep = ":")
+
+    # format column so that R recognizes it as time
+
+    env21$start_time <- hms::as_hms(env21$start_time)
+    #check structure
+    str(env21$start_time)
+
+
+    ### 2022
+
+    # remove ':' that's already in there
+    env22$start_time <- str_replace(env22$start_time, '[:]', '')
+
+    # through trial and error need to change str to integer
+    env22$start_time <- as.integer(env22$start_time)
+
+    # add 00 to end
+    env22$start_time <- base::paste0(env22$start_time, "00") 
+
+    # add leading 0
+    env22$start_time <- sprintf("%06d", as.numeric(env22$start_time))
+
+    # separate sunrise times into columns for h:m:s
+    env22 <- tidyr::extract(env22, 
+                                 start_time, 
+                                 into = c("hr", "min", "sec"), 
+                                 "(.{2})(.{2})(.{2})", 
+                                 remove = FALSE)
+
+    # paste h:m:s column together into another column and separate with ':'
+    env22$start_time <- base::paste(env22$hr, 
+                                         env22$min, 
+                                         env22$sec, 
+                                         sep = ":")
+
+    # format column so that R recognizes it as time
+    env22$start_time <- hms::as_hms(env22$start_time)
+
+    #check structure
+    str(env22$start_time)
+
+
+    ```
+
+3.  Merge sunrise time with environmental data
+
+    ```{r merge sunrise with environ}
+    # make sure start time and sunrise times are both 'hms'
+    str(env19)
+    str(sunrise19)
+
+    # merge environmental and sunrise data frames
+    env19 <- env19 %>%
+      dplyr::inner_join(sunrise19, by = "date")
+
+
+    ## 2021 Merge
+
+    str(env21)
+    str(sunrise21)
+
+    # merge environmental and sunrise dataframes
+
+    env21 <- env21 %>%
+      dplyr::inner_join(sunrise21, by = "date")
+
+
+    ## 2022 Merge
+
+    str(env22)
+    str(sunrise22)
+
+    # merge environmental and sunrise dataframes
+
+    env22 <- env22 %>%
+      dplyr::inner_join(sunrise22, by = "date")
+    ```
+
+### Calculate 'Minutes After Sunrise'
+
+```{r}
+### 2019 
+
+colnames(env19)
+
+# have to combine date and time so it can correctly calculate the difference in time:
+env19$min_after_sun <- as.numeric(difftime(strptime(paste(env19[,7], env19[,8]), "%Y-%m-%d %H:%M:%S"), strptime(paste(env19[,7], env19[,32]), "%Y-%m-%d %H:%M:%S"), units = "mins"))
+
+# check
+head(env19)
+
+
+### 2021 
+
+colnames(env21)
+
+str(sunrise21)
+str(env21)
+
+env21$min_after_sun <- as.numeric(difftime(strptime(paste(env21[,7], env21[,8]), "%Y-%m-%d %H:%M:%S"), strptime(paste(env21[,7], env21[,32]), "%Y-%m-%d %H:%M:%S"), units = "mins"))
+
+#check
+head(env21)
+
+### 2022
+
+env22$min_after_sun <- as.numeric(difftime(strptime(paste(env22[,6], env22[,15]), "%Y-%m-%d %H:%M:%S"), strptime(paste(env22[,6], env22[,32]), "%Y-%m-%d %H:%M:%S"), units = "mins"))
+
+head(env22)
+```
+
+### Add year column
+
+```{r}
+env19$year <- 2019
+colnames(env19)
+
+env21$year <- 2021
+colnames(env21)
+
+```
+
+## FILTER FOR DISTANCE
+
+Survey points were 800m apart. In order to make sure we did not double count individuals, I will only keep observations with distances 400m or less.
+
+I will do this buy subsetting rows based on distance
+
+Distance must be 0 \> \< 401 (in 2019 data lots of -999 which means they were greater than 400m, but less than 1km away) OR dist_cat has a value \>0 (prey smaller than American Robin placed in distance 'bins' of 0-100 meters, 100-200 meters, and 200+ meters but less than 400m away)
+
+Also filtered out observations that were flyovers
+
+```{r}
+## 2019
+
+# check structure
+str(obs19)
+
+#check unique values to make sure there are no characters that will be 
+#returned as NAs
+unique(obs19$exact_distance)
+
+# change 400 + to -999
+# change 100-200 to 150 just to make filtering easier
+# change 'U' to 999
+
+obs19$exact_distance[obs19$exact_distance == "400+"] <- "999"
+obs19$exact_distance[obs19$exact_distance == "100-200"] <- "150"
+obs19$exact_distance[obs19$exact_distance == "U"] <- "999" # looked at original data sheets and birds was far off
+
+# change -999 to 999 so I can filter for distances greater than 400
+# and having -999 will be a negative number and therefore less than 400
+obs19$exact_distance[obs19$exact_distance == "-999"] <- "999"
+
+# now change structure of exact_distance to numeric
+obs19$exact_distance <- as.numeric(obs19$exact_distance)
+
+
+# filter to keep only distances that are LESS THAN 401 'OR' where the distance categroy does not equal NA (this is so we still keep the rows where distance is in the distance category column)
+obs.19.dist <- dplyr::filter(obs19, exact_distance < 401 | dist_cat != "NA")
+
+# okay there is a column with a value for dist cat and 999 in dist that I want to fix by doing the following: 
+# if dist_cat doesn't equal NA (!=NA) change dist = NA
+
+obs.19.dist <- within(obs.19.dist, exact_distance[exact_distance == '999' & dist_cat != 'NA'] <- 'NA')
+
+# Not filtering out dist cat of 201 anymore because these birds are between 201-400m
+# now filter out dist_cats of 201?????
+
+#obs.19.dist <- dplyr::filter(obs.19.dist, dist_cat != "201" | distance != "NA")
+
+# NOW filter out flyovers:
+
+obs.19.dist <- dplyr::filter(obs.19.dist, flyover != "Y")
+
+# okay, think we've got distance filter sorted out. woof.
+# this is why entering data is just as important. Ugh. I hate cleaning.
+
+
+
+### 2021
+
+str(obs21) #distance is already in interval
+
+obs21$exact_distance <- as.numeric(obs21$exact_distance)
+
+unique(obs21$exact_distance)
+
+obs.21.dist <- dplyr::filter(obs21, exact_distance < 401 | dist_cat != "NA")
+
+# now filter out dist_cats of 201??? Not filtering this out anymore because
+# small birds likely couldn't be detected past 400m
+
+#obs.21.dist <- dplyr::filter(obs.21.dist, dist_cat != "201" | distance != "NA")
+
+# okay this looks good too
+# NOW filter out flyovers that aren't displays
+
+obs.21.dist <- dplyr::filter(obs.21.dist, flyover != "Y" | display == "Y")
+
+
+### 2022
+
+str(obs22)
+
+#check unique values to make sure there are no characters that will be 
+#returned as NAs when changing to integer
+unique(obs22$distance)
+
+# now change structure of distance to numeric
+obs22$distance <- as.numeric(obs22$distance)
+
+# filter to keep only distances that are LESS THAN 401 'OR' where the distance categroy does not equal NA (this is so we still keep the rows where distance is in the distance category column)
+obs22.filter <- dplyr::filter(obs22, distance < 401 | dist_cat != "NA")
+
+# now filter out flyovers that weren't displays
+obs22.filter2 <- dplyr::filter(obs22.filter, flyover != "Y" | display == "Y")
+
+
 ```
