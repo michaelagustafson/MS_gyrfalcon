@@ -806,6 +806,10 @@ all.env[552,6] <- "42"
 all.env2 <- left_join(lc.vars, all.env, by = 'id')
 
 write.csv(all.env2, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_env_join_18Oct23.csv")
+
+all.env2 <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_env_join_18Oct23.csv")
+
+all.env2 <- all.env2[, -c(1)]
 ```
 
 ## Remove female ptarmigan
@@ -873,12 +877,20 @@ wipt.male2 <- mutate(wipt.male,
                                                 ifelse(wipt.male$time_int %in% 6:7, "4",
                                                        ifelse(wipt.male$time_int %in% 8:9, "5", "NA"))))))
 
+
+wipt.male.3int <- mutate(wipt.male, 
+                time_int = ifelse(wipt.male$time_int %in% 0:2, "1", 
+                                  ifelse(wipt.male$time_int %in% 3:4, "2", 
+                                         ifelse(wipt.male$time_int %in% 5:9, "3", "NA"))))
+
+
 # look at sample size
 
 wipt.male2$count <- as.integer(wipt.male2$count)
 sum(wipt.male2$count) # sample size 485
 
-
+wipt.male.3int$count <- as.integer(wipt.male.3int$count)
+sum(wipt.male.3int$count) # sample size 485
 
 # get number of sites with counts each year
 wipt.male19 <- subset(wipt.male2, year == "2019" & wipt.male2$count > 0)
@@ -893,7 +905,7 @@ wipt.male22 <- subset(wipt.male2, year == "2022" & wipt.male2$count > 0)
 sum(wipt.male22$count) # 9 obs in 2022
 unique(wipt.male22$id) # 5 sites in 22
 
-
+############### 5 TIME INTERVALS #################
 
 str(wipt.male2)
 wipt.male2$id <- as.factor(wipt.male2$id)
@@ -912,7 +924,6 @@ names(wipt.male.agg2)[names(wipt.male.agg2) == "Group.1"] <- "id"
 names(wipt.male.agg2)[names(wipt.male.agg2) == "Group.2"] <- "time_int"
 names(wipt.male.agg2)[names(wipt.male.agg2) == "Group.3"] <- "exact_distance"
 names(wipt.male.agg2)[names(wipt.male.agg2) == "x"] <- "count"
-
 
 sum(wipt.male.agg2$count)
 
@@ -937,6 +948,78 @@ wipt.male.wide <- wipt.male.agg2 %>%
 sum(wipt.male.wide[,c(3:7)]) 
 unique(wipt.male.wide$id)
 #write.csv(wipt.male.wide, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_wide_18Oct23.csv")
+
+#####################################################
+
+################# 3 TIME INTERVALS ###################
+
+
+str(wipt.male.3int)
+wipt.male.3int$id <- as.character(wipt.male.3int$id)
+wipt.male.3int$time_int <- as.character(wipt.male.3int$time_int)
+wipt.male.3int$exact_distance <- as.character(wipt.male.3int$exact_distance)
+
+# change NA distances to 0
+
+
+wipt.male.3int$exact_distance[wipt.male.3int$count == 0] <- "0"
+
+wipt.male.3int <- wipt.male.3int[,c(1:5,8)]
+
+sum(wipt.male.3int$count) # 485
+
+
+wipt.male.3int.agg <- aggregate(x = wipt.male.3int$count, 
+                      by = list(wipt.male.3int$exact_distance, wipt.male.3int$id,
+                                wipt.male.3int$time_int), 
+                      FUN = sum,
+                      na.rm = FALSE, na.action=NULL)
+
+names(wipt.male.3int.agg)[names(wipt.male.3int.agg) == "Group.1"] <- "exact_distance"
+names(wipt.male.3int.agg)[names(wipt.male.3int.agg) == "Group.2"] <- "id"
+names(wipt.male.3int.agg)[names(wipt.male.3int.agg) == "Group.3"] <- "time_int"
+names(wipt.male.3int.agg)[names(wipt.male.3int.agg) == "x"] <- "count"
+
+sum(wipt.male.3int.agg$count) #481 - not sure where these are being taken out from
+
+unique(wipt.male.3int.agg$id)
+
+
+
+# nothing missing! 
+
+
+# spread dataframes:
+
+unique(wipt.male.3int.agg$id) # should end up with 988 levels
+
+wipt.male.wide.3int <- wipt.male.3int.agg %>%
+  dplyr::select(id, time_int, count, exact_distance) %>%
+  spread(key = time_int, value = count, fill = 0)
+
+
+# checks for missing data
+
+miss1 <- anti_join(all.env2, wipt.male.wide.3int, by = 'id') # clear
+miss2 <- anti_join(wipt.male.wide.3int, all.env2, by = 'id') # clear
+#nothing missing
+
+
+# double check that sample size is still 485
+sum(wipt.male.wide[,c(3:5)]) # 481??
+unique(wipt.male.wide$id) # 988 ok
+
+
+write.csv(wipt.male.wide, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_wide_3int_19Oct23.csv")
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1011,7 +1094,11 @@ wipt.male.env.join2 <- left_join(wipt.male.wide, all.env.scaled)
 head(wipt.male.env.join); dim(wipt.male.env.join)
 str(wipt.male.env.join)
 
+########### 3 TIME INTERVAL ##############
 
+wipt.male.env.join3 <- left_join(wipt.male.wide.3int, all.env.scaled)
+head(wipt.male.env.join3); dim(wipt.male.env.join3)
+str(wipt.male.env.join3)
 
-write.csv(wipt.male.env.join, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_df_timeanddist_18Oct23.csv")
+write.csv(wipt.male.env.join3, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_df_3inttimeanddist_19Oct23.csv")
 ```
