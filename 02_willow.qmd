@@ -19,7 +19,7 @@ getwd()
 
 ```{r library}
 
-
+library(dplyr)
 library(unmarked)
 
 ```
@@ -29,7 +29,63 @@ library(unmarked)
 ```{r load data}
 
 # WIPT male count data:
+all.obs <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_obs_17Oct23.csv")
+all.obs <- all.obs[,-c(1)]
 
+all.obs$exact_distance[all.obs$species != "WIPT"] <- NA
+  
+
+wipt.only <- filter(all.obs, species == "WIPT")
+
+# adjust these labels so sex matches number observed
+wipt.only[243, 10] = "MMMF"
+wipt.only[245, 10] = "MMF"
+
+#remove single F and single U
+
+males <- filter(wipt.only, sex != "F")
+males2 <- filter(males, sex != "U")
+
+
+males2$sex[males2$sex == "M,F"] <- "MF"
+males2$sex[males2$sex == "F,M"] <- "MF"
+males2$sex[males2$sex == "M,2U"] <- "MUU"
+
+
+# remove females from grouped counts
+males2$count <- as.numeric(males2$count)
+males2$sex <- as.factor(males2$sex)
+
+#MF
+males2$count[males2$sex == "MF"] <- males2$count[males2$sex == "MF"] - 1
+
+#MMF
+males2$count[males2$sex == "MMF"] <- males2$count[males2$sex == "MMF"] - 1
+
+#MMMF
+males2$count[males2$sex == "MMMF"] <- males2$count[males2$sex == "MMMF"] - 1
+
+#MUU
+males2$count[males2$sex == "MUU"] <- males2$count[males2$sex == "MUU"] - 2
+
+
+# now take only columns needed then uncount groups
+
+males3 <- males2[,c(1,4,5,8)]
+
+males4 <- males3 %>%
+   uncount(count)
+
+males4[113,3] <- 100
+males4[224,3] <- 200
+
+males5 <- males4[-c(220,222),]
+
+write.csv(males4, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wiptmalesonly_timeanddist.csv")
+
+
+
+##############################
 wiptmale <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wiptmale.csv")
 
 
@@ -40,6 +96,11 @@ wipt.male.3int <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_d
 
 
 env <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_env_17Oct23.csv")
+
+
+env.s <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_df_timeanddist_18Oct23.csv")
+
+wipt.time <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_wide_18Oct23.csv")
 ```
 
 ## Create unmarkedFrameGDR
@@ -50,38 +111,19 @@ env <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_env_17Oct23.csv")
 
 library(tidyr)
 
-
+all.obs$id <- as.factor(all.obs$id)
+levels(all.obs$id)
 ### NEED TO CLEAN THIS UP
+str(males4)
+males4$id <- as.factor(males4$id)
 
-# create distance bins? or just say every meter is a bin so would have 401 breaks
-wiptdist <- wiptmale[,c(2,4,6)]
-wiptdist$exact_distance[wiptdist$count == 0] <- NA
-# remove all rows with NAs
-wiptcounts <- wiptdist %>%
-  filter(!is.na(exact_distance))
-
-sum(wiptcounts$count)
-
-aggregated_df <- wiptcounts %>%
-  group_by(id, exact_distance) %>%
-  summarise(count = sum(count))
-sum(aggregated_df$count)
-
-aggregated_df$id <- as.factor(aggregated_df$id)
-env$id <- as.factor(env$id)
 
 # now include sites that didn't have individuals:
 
-levels(aggregated_df$id) <- c(levels(env$id))
-levels(aggregated_df$id)
+levels(males4$id) <- c(levels(all.obs$id))
+levels(males4$id)
 
-wipt <- as.data.frame(aggregated_df)
-wipt$exact_distance <- as.numeric(wipt$exact_distance)
-
-expand <- wipt %>%
-  uncount(count)
-
-yDat <- formatDistData(expand, distCol = "exact_distance", transectNameCol = "id", dist.breaks = c(0, 50, 100, 150, 200, 250, 300, 350, 400 ))
+yDist <- formatDistData(expand, distCol = "exact_distance", transectNameCol = "id", dist.breaks = c(0, 50, 100, 150, 200, 250, 300, 350, 400 ))
 
 sum(yDat[,c(1:8)])
 ```
@@ -98,11 +140,33 @@ levels(time$id) <- c(levels(env$id))
 levels(time$id)
 
 #uncount groups so each individual has its own row
-
+expandtime$id <- as.factor(expandtime$id)
 expandtime <- time %>%
   uncount(count)
 
+env$id <- as.factor(env$id)
+levels(env$id)
+
+levels(expandtime$id) <- c(levels(env$id))
+levels(expandtime$id)
+
+expandtime$id <- factor(expandtime$id, levels = unique(c(levels(env$id), levels(expandtime$id))))
+
+levels(expandtime$id)
+
 yRem <- formatDistData(expandtime, distCol = "time_int", transectNameCol = "id", dist.breaks = c(0, 1, 2, 3, 4, 5))
 
+
 sum(yRem[,c(1:5)])
+```
+
+### full Frame
+
+```{r unmarkedFrameGDR}
+
+timerem <- wipt.time[,c(3:7)]
+siCovs <- env.s[,c(2, 8:22)]
+oCovs <- env.s[,c(2, 23:35)]
+breaks <- seq(0, 400, by = 50)
+umfGDR <- unmarkedFrameGDR(yDistance = yDat, yRemoval = timerem, numPrimary = 1, siteCovs = siCovs, obsCovs = oCovs, yearlySiteCovs = NULL, dist.breaks = breaks, unitsIn = 'm', period.lengths = NULL)
 ```
