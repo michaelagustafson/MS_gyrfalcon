@@ -784,7 +784,6 @@ Now save and close, then reopen to clear workspace and data usage. We'll reload 
 I calculated and extracted the percentage of each habitat type within a 400m radius of each survey point. I will now join that data to its corresponding point.
 
 ```{r add habitat}
-
 all.obs4 <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_obs_17Oct23.csv") 
 all.env <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_env_17Oct23.csv") 
 lc.vars <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/pland2_400r.csv") #these are the land cover characteristics and elevation we extracted in the previous code 
@@ -869,6 +868,7 @@ wipt.male[7991, 4] <- 0
 # check again
 sum(is.na(wipt.male$time_int))
 
+################### 5 TIME INTERVALS #############################
 # change time intervals to reflect intervals of 2 minutes
 wipt.male2 <- mutate(wipt.male, 
                 time_int = ifelse(wipt.male$time_int %in% 0:1, "1", 
@@ -877,12 +877,14 @@ wipt.male2 <- mutate(wipt.male,
                                                 ifelse(wipt.male$time_int %in% 6:7, "4",
                                                        ifelse(wipt.male$time_int %in% 8:9, "5", "NA"))))))
 
-
+###################################################################
+################ 3 TIME INTERVALS #################################
 wipt.male.3int <- mutate(wipt.male, 
                 time_int = ifelse(wipt.male$time_int %in% 0:2, "1", 
                                   ifelse(wipt.male$time_int %in% 3:4, "2", 
                                          ifelse(wipt.male$time_int %in% 5:9, "3", "NA"))))
 
+###################################################################
 
 # look at sample size
 
@@ -904,6 +906,7 @@ unique(wipt.male21$id) # 127 sites in 21
 wipt.male22 <- subset(wipt.male2, year == "2022" & wipt.male2$count > 0)
 sum(wipt.male22$count) # 9 obs in 2022
 unique(wipt.male22$id) # 5 sites in 22
+###################################################################
 
 ############### 5 TIME INTERVALS #################
 
@@ -915,7 +918,7 @@ wipt.male2$count <- as.integer(wipt.male2$count)
 
 wipt.male.agg2 <- aggregate(x = wipt.male2$count, 
                       by = list(wipt.male2$id, wipt.male2$time_int, 
-                                wipt.male2$exact_distance), 
+                                wipt.male2$exact_distance, wipt.male2$year), 
                        
                       FUN = sum,
                       na.action=NULL)
@@ -923,17 +926,13 @@ wipt.male.agg2 <- aggregate(x = wipt.male2$count,
 names(wipt.male.agg2)[names(wipt.male.agg2) == "Group.1"] <- "id"
 names(wipt.male.agg2)[names(wipt.male.agg2) == "Group.2"] <- "time_int"
 names(wipt.male.agg2)[names(wipt.male.agg2) == "Group.3"] <- "exact_distance"
+names(wipt.male.agg2)[names(wipt.male.agg2) == "Group.4"] <- "year"
 names(wipt.male.agg2)[names(wipt.male.agg2) == "x"] <- "count"
 
 sum(wipt.male.agg2$count)
 
-# checks for missing data
 
-all.env2$id <- as.factor(all.env2$id)
-miss1 <- anti_join(all.env2, wipt.male.agg2, by = 'id') # clear
-miss2 <- anti_join(wipt.male.agg2, all.env2, by = 'id') # clear
 
-# nothing missing! 
 
 
 # spread dataframes:
@@ -947,6 +946,17 @@ wipt.male.wide <- wipt.male.agg2 %>%
 # double check that sample size is still 485
 sum(wipt.male.wide[,c(3:7)]) 
 unique(wipt.male.wide$id)
+
+
+# checks for missing data
+
+all.env2$id <- as.factor(all.env2$id)
+miss1 <- anti_join(all.env2, wipt.male.agg2, by = 'id') # clear
+miss2 <- anti_join(wipt.male.agg2, all.env2, by = 'id') # clear
+
+# nothing missing! 
+
+
 #write.csv(wipt.male.wide, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_wide_18Oct23.csv")
 
 #####################################################
@@ -1090,6 +1100,15 @@ cor.mat
 
 all.env.scaled$year <- as.factor(all.env.scaled$year)
 
+
+##### Aggregated 5-minute interval
+wipt.male.agg.env.join <- left_join(wipt.male.agg2, all.env.scaled, by = 'id')
+unique(wipt.male.agg.env.join$id)
+write.csv(wipt.male.agg.env.join, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wiptmale.csv")
+
+#### Wide spread data:
+
+##### 5 interval
 wipt.male.env.join2 <- left_join(wipt.male.wide, all.env.scaled)
 head(wipt.male.env.join); dim(wipt.male.env.join)
 str(wipt.male.env.join)
