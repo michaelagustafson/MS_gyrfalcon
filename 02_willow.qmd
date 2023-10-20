@@ -38,8 +38,8 @@ all.obs$exact_distance[all.obs$species != "WIPT"] <- NA
 wipt.only <- filter(all.obs, species == "WIPT")
 
 # adjust these labels so sex matches number observed
-wipt.only[243, 10] = "MMMF"
-wipt.only[245, 10] = "MMF"
+wipt.only[247, 10] = "MMMF"
+wipt.only[249, 10] = "MMF"
 
 #remove single F and single U
 
@@ -76,12 +76,14 @@ males3 <- males2[,c(1,4,5,8)]
 males4 <- males3 %>%
    uncount(count)
 
-males4[113,3] <- 100
-males4[224,3] <- 200
+males4[113,3] <- 200
+males4[218,3] <- 400
+males4[220,3] <- 400
+males4[222,3] <- 200
 
-males5 <- males4[-c(220,222),]
 
-write.csv(males4, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wiptmalesonly_timeanddist.csv")
+males5 <- data.frame(males4)
+write.csv(males4, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wiptmalesonly_timeanddist_19Oct23.csv")
 
 
 
@@ -114,59 +116,266 @@ library(tidyr)
 all.obs$id <- as.factor(all.obs$id)
 levels(all.obs$id)
 ### NEED TO CLEAN THIS UP
-str(males4)
-males4$id <- as.factor(males4$id)
+str(males5)
+
+
+
+malesd <- males5[,-c(2)]
+malesd$observed <- 1
+
+
+result_df <- malesd %>%
+  group_by(id, exact_distance) %>%  # Replace 'your_column' with the actual column name containing duplicates
+  summarise(count = sum(observed)) %>%
+  ungroup()
+
+sum(result_df$count)
+
+result_uncount <- result_df %>%
+  uncount(count)
 
 
 # now include sites that didn't have individuals:
 
-levels(males4$id) <- c(levels(all.obs$id))
-levels(males4$id)
 
-yDist <- formatDistData(expand, distCol = "exact_distance", transectNameCol = "id", dist.breaks = c(0, 50, 100, 150, 200, 250, 300, 350, 400 ))
+obs.ids <- as.data.frame(males6$id)
+all.ids <- as.data.frame(env$id)
 
-sum(yDat[,c(1:8)])
+missing_df <- as.data.frame(setdiff(all.ids$`env$id`, obs.ids$`males6$id`))
+colnames(missing_df)[1] <- "id"
+
+num_columns <- 2
+num_rows <- 738
+col_names <- c("id", "exact_distance")
+
+my_df <- data.frame(matrix(NA, nrow = num_rows, ncol = num_columns))
+colnames(my_df) <- col_names
+
+my_df$id <- missing_df$id
+
+
+males9 <- rbind(result_uncount, my_df)
+males9$id <- as.factor(males9$id)
+levels(males9$id)
+
+males10 <- data.frame(males9)
+males10$exact_distance <- as.integer(males10$exact_distance)
+
+############ create matrix using spread #############
+
+
+my.bins <- seq(0, 400, by = 50)
+
+bin.df$distance_bin <- cut(result_df$exact_distance, breaks = my.bins, include.lowest = TRUE)
+
+# have to make each site that has a different distance bin observation a unique key to be able to spread it
+bin.df$id <- make.unique(bin.df$id, sep = ".")
+
+dist.wide <- bin.df %>%
+  dplyr::select(id, distance_bin, count) %>%
+  spread(key = distance_bin, value = count, fill = 0)
+
+# now add in the sites that didn't have male wipt observations
+# have to create an empty data frame i can bind to the one of observations
+num_columns <- 10 # define number of columns
+num_rows <- 738 #define number of rows
+col_names <- colnames(dist.wide) # define what column names will be (i want them to be the same as the frame i'm binding too)
+
+# create the dataframe wtih my specifications
+my_df <- data.frame(matrix(NA, nrow = num_rows, ncol = num_columns))
+
+# and add column names
+colnames(my_df) <- col_names
+
+# and replace 'id' column with names of all empty sites
+my_df$id <- missing_df$id
+
+male.dist <- rbind(dist.wide, my_df)
+
+# now remove unique identifier so i can collapse sites
+male.dist$id <- sub("\\.\\d+$", "", male.dist$id)
+
+male.dist[is.na(male.dist)] <- 0
+male.dist <- male.dist[,-c(10)]
+
+male.dist
+sum(male.dist[,c(2:9)])
+
+male.dist$id <- as.factor(male.dist$id)
+
+
+summarized_data <- male.dist %>%
+  group_by(id) %>%
+  summarize_all(list(sum)) %>%
+  ungroup()
+sum(summarized_data[,c(2:9)])
+
+
+summarized_data$rowsum <- rowSums(summarized_data[2:9])
+write.csv(male.dist, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/distsums2.csv")
+
+
+yDist <- formatDistData(summarized_data, distCol = "exact_distance", transectNameCol = "id", dist.breaks = my.bins)
+
+sum(yDist[,c(1:8)])
+```
+
+## second try Distance
+
+```{r}
+
+males6 <- data.frame(males5)
+
+# now i need to get exact distances to 'binned data'
+# maybe here I'll try continous...
+
+my.bins <- seq(0, 400, by = 50)
+
+males6$distance_bin <- cut(males6$exact_distance, breaks = my.bins, include.lowest = TRUE)
+
+
+num_columns <- 4 # define number of columns
+num_rows <- 738 #define number of rows
+col_names <- colnames(males6) # define what column names will be (i want them to be the same as the frame i'm binding too)
+
+# create the dataframe wtih my specifications
+my_df <- data.frame(matrix(0, nrow = num_rows, ncol = num_columns))
+
+# and add column names
+colnames(my_df) <- col_names
+
+# and replace 'id' column with names of all empty sites
+my_df$id <- missing_df$id
+
+male.comb <- rbind(males6, my_df, fill = 0)
+
+my.bin.list <- as.list(my.bins)
+
+male.dist.comb <- male.comb %>%
+  mutate(observed = ifelse(exact_distance > 0, 1, 0))
+
+
+sum(male.dist.comb$observed)
+
+male.dist.comb$id <- make.unique(male.dist.comb$id, sep = ".")
+
+
+dist.wide <- male.dist.comb %>%
+  dplyr::select(id, distance_bin, observed) %>%
+  spread(key = distance_bin, value = observed, fill = 0)
+
+
+dist.wide <- dist.wide[-c(1), -c(10)]
+
+
+dist.wide$id <- sub("\\.\\d+$", "", dist.wide$id)
+
+dist.wide2 <- dist.wide %>%
+  group_by(id) %>%
+  summarize_all(list(sum)) %>%
+  ungroup()
+
+sum(dist.wide2[,c(2:9)])
+
+########### format distance data for frame########
+
+yDist <- formatDistData(male.comb, distCol = "exact_distance", transectNameCol = "id", dist.breaks = my.bin.list)
+
+
+
+sum(yDist)
+write.csv(yDist, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/distsums.csv")
+
+
+
+ydist.df <- data.frame(id = row.names(yDist), yDist)
+write.csv(ydist.df, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/dist_df.csv")
 ```
 
 ### Time Removal Matrix
 
 ```{r}
 
-yRem <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_wide_18Oct23.csv")
+males7$observed <- 1
+males7[,-c(3)]
 
-time <- wiptmale[,c(2,3,6)]
+male.agg <- aggregate(x = males7$observed, 
+                      by = list(males7$id, males7$time_int),
+                      FUN = sum,
+                      na.action=NULL)
 
-levels(time$id) <- c(levels(env$id))
-levels(time$id)
+names(male.agg)[names(male.agg) == "Group.1"] <- "id"
+names(male.agg)[names(male.agg) == "Group.2"] <- "time_int"
+names(male.agg)[names(male.agg) == "x"] <- "observed"
 
-#uncount groups so each individual has its own row
-expandtime$id <- as.factor(expandtime$id)
-expandtime <- time %>%
-  uncount(count)
+sum(male.agg$observed)
 
-env$id <- as.factor(env$id)
-levels(env$id)
+male.wide <- male.agg %>%
+  dplyr::select(id, time_int, observed) %>%
+  spread(key = time_int, value = observed, fill = 0)
 
-levels(expandtime$id) <- c(levels(env$id))
-levels(expandtime$id)
-
-expandtime$id <- factor(expandtime$id, levels = unique(c(levels(env$id), levels(expandtime$id))))
-
-levels(expandtime$id)
-
-yRem <- formatDistData(expandtime, distCol = "time_int", transectNameCol = "id", dist.breaks = c(0, 1, 2, 3, 4, 5))
+sum(male.wide[,c(2:11)])
 
 
-sum(yRem[,c(1:5)])
+male.wide$rowsum <- rowSums(male.wide[(2:11)])
+
+write.csv(male.wide, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/timesums.csv")
+
+yRem <- formatDistData(males7, distCol = "time_int", transectNameCol = "id", dist.breaks = c(0, 2, 4, 6, 8, 10))
+
+
+sum(yRem)
+write.csv(yRem, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/timesums.csv")
+```
+
+### timetry 2
+
+```{r time try 2}
+
+malest <- males6[,-c(3:4)]
+
+num_columns <- 2 # define number of columns
+num_rows <- 738 #define number of rows
+col_names <- colnames(malest) # define what column names will be (i want them to be the same as the frame i'm binding too)
+
+# create the dataframe wtih my specifications
+my_df <- data.frame(matrix(NA, nrow = num_rows, ncol = num_columns))
+
+# and add column names
+colnames(my_df) <- col_names
+
+# and replace 'id' column with names of all empty sites
+my_df$id <- missing_df$id
+
+male.time.comb <- rbind(malest, my_df)
+
+levels(male.time.comb)
+
+
+
+
+
+yRem <- formatDistData(male.time.comb, distCol = "time_int", transectNameCol = "id", dist.breaks = c(0, 2, 4, 6, 8, 10))
+
+sum(yRem)
 ```
 
 ### full Frame
 
 ```{r unmarkedFrameGDR}
 
+all.covs <- male.time.comb %>%
+  left_join(env.s, by = "id")
+
 timerem <- wipt.time[,c(3:7)]
 siCovs <- env.s[,c(2, 8:22)]
-oCovs <- env.s[,c(2, 23:35)]
+oCovs <- env.s[,c(2, 23, 29, 33, 34)]
+oCovs$id <- as.factor(oCovs$id)
 breaks <- seq(0, 400, by = 50)
-umfGDR <- unmarkedFrameGDR(yDistance = yDat, yRemoval = timerem, numPrimary = 1, siteCovs = siCovs, obsCovs = oCovs, yearlySiteCovs = NULL, dist.breaks = breaks, unitsIn = 'm', period.lengths = NULL)
+
+
+
+
+
+umfGDR <- unmarkedFrameGDR(yDistance = yDist, yRemoval = yRem, numPrimary = 1, siteCovs = siCovs, obsCovs = NULL, yearlySiteCovs = oCovs, dist.breaks = breaks, unitsIn = 'm', period.lengths = NULL)
 ```
