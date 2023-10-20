@@ -253,6 +253,8 @@ using function gdistremoval() in 'unmarked'
 
 # my abundance covariates for wipt: tundra, tussock, tall shrub, elevation
 
+#### Output of density
+
 umzip <- gdistremoval(lambdaformula = ~1 + tundra + tussock + tallshrub + elev + offset(log(area)), phiformula = ~1, removalformula = ~1 + julian + min_after_sun + wind + observer, data = umfGDR, keyfun = "halfnorm", output = "density", unitsOut = "kmsq", mixture = "ZIP")
 
 
@@ -263,7 +265,7 @@ ump <- gdistremoval(lambdaformula = ~1 + tundra + tussock + tallshrub + elev + o
 
 summary(ump)
 
-
+### Output of abundance, but with the addition of area offset it's abundance
 
 zip.abund <- gdistremoval(lambdaformula = ~1 + tundra + tussock + tallshrub + elev + offset(log(area)), phiformula = ~1, removalformula = ~1 + julian + min_after_sun + wind + observer, data = umfGDR, keyfun = "halfnorm", output = "abund", mixture = "ZIP")
 summary(zip.abund)
