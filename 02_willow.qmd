@@ -24,6 +24,7 @@ library(dplyr)
 library(unmarked)
 library(raster)
 library(rgdal)
+library(ggplot2)
 
 ```
 
@@ -269,6 +270,7 @@ summary(zip.abund)
 
 p.abund <- gdistremoval(lambdaformula = ~1 + tundra + tussock + tallshrub + elev + offset(log(area)), phiformula = ~1, removalformula = ~1 + julian + min_after_sun + wind + observer, data = umfGDR, keyfun = "halfnorm", output = "abund", mixture = "P")
 summary(p.abund)
+summary(zip.abund)
 ```
 
 ## Spatial predictions
@@ -352,12 +354,406 @@ cellStats(umzip.prediction, "sum") # 50 mil
 
 pabund.prediction <- predict(p.abund, type = "lambda", newdata = pred.surface)
 plot(pabund.prediction)
-cellStats(pabund.prediction, "sum") # 26 mil
+cellStats(pabund.prediction, "sum") # 26 059, 196 mil
 
 
 zipabund.prediction <- predict(zip.abund, type = "lambda", newdata = pred.surface)
 plot(zipabund.prediction)
-cellStats(zipabund.prediction, "sum") # 26 mil
+cellStats(zipabund.prediction, "sum") # 26 923, 906 mil
 
 
 ```
+
+## Abundance Model Partial Prediction Plots
+
+```{r prep ppp}
+# Estimate partial prediction plots for predictors with 95% CIs not overlapping zero:
+
+# Start by creating our datasets to predict over
+
+# how many values do we use:
+n <- 100
+
+# Use the observed values to define our range:
+
+# import unscaled predictors
+env <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_env_join_18Oct23.csv")
+
+elevation.pp <- seq( min( env[,"elev"]),max(500),
+                   length.out = n )
+
+tallshrub.pp <- seq( min( env[,"tallshrub"]),max( env[,"tallshrub"]),
+                   length.out = n )
+
+tundra.pp <- seq( min( env[,"tundra"]),max( env[,"tundra"]),
+                   length.out = n )
+
+tussock.pp <- seq( min( env[,"tussock"]),max( env[,"tussock"]),
+                   length.out = n )
+
+#standardize predictors:
+elev.std <- scale( elevation.pp )
+tallshrub.std <- scale( tallshrub.pp )
+tundra.std <- scale( tundra.pp )
+tussock.std <- scale( tussock.pp )
+area.x = 1000*1000/10000
+```
+
+### Elevation
+
+```{r elevation ppp}
+### ELEVATION
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+
+elevData <- data.frame( tundra = 0, tussock = 0, tallshrub = 0, elev = elev.std, area = area.x )
+
+#predict partial relationship:
+pred.elev.p <- predict(p.abund, type = "lambda", newdata = elevData, 
+                          appendData = TRUE )
+
+pred.elev.zip <- predict(zip.abund, type = "lambda", newdata = elevData, 
+                          appendData = TRUE )
+
+#view
+head( pred.elev.p ); dim( pred.elev.p )
+head( pred.elev.zip); dim( pred.elev.zip)
+
+### plot
+
+elev.p <- cbind( pred.elev.p[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 30) +
+  # add labels
+ # ylim(0, 13) +
+  labs( x = "Elevation (m)", y = "Willow Ptarmigan per kmsq" ) +
+  theme(text=element_text(size=65)) +
+    # add band of confidence intervals
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+
+
+#view
+elev.p
+ggsave("E:/gyrf_analysis/partial prediction plots 20oct23/wp_elev_poiss.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+
+
+# ZIP ppp
+elev.zip <- cbind( pred.elev.zip[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 35) +
+  # add labels
+ # ylim(0, 13) +
+  # add labels
+  labs( x = "Elevation (m)", y = "Willow Ptarmigan per kmsq" ) +
+  theme(text=element_text(size=65)) +
+  # add band of confidence intervals
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+
+
+#view
+elev.zip
+ggsave("E:/gyrf_analysis/partial prediction plots 20oct23/wp_elev_zip.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+
+```
+
+###  Tundra
+
+```{r tundra ppp}
+
+### TUNDRA
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+tundData <- data.frame( tundra = tundra.std, tussock = 0, tallshrub = 0, elev = 0, area = area.x )
+
+#predict partial relationship:
+tun.p <- predict( p.abund, type = "lambda", newdata = tundData, 
+                          appendData = TRUE )
+tun.zip <- predict( zip.abund, type = "lambda", newdata = tundData, 
+                          appendData = TRUE )
+
+#view
+head( tun.p ); dim( tun.p )
+head( tun.zip ); dim( tun.zip)
+
+
+### plot
+
+tund.p <- cbind( tun.p[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 45) +
+  theme_classic( base_size = 30) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  # add labels
+  labs( x = "Tundra", y = "Willow Ptarmigan per kmsq" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue")
+
+
+#view
+tund.p
+ggsave("E:/gyrf_analysis/partial prediction plots 20oct23/wp_tundra_poiss.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+
+### ZIP
+
+tund.zip <- cbind( tun.zip[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 45) +
+  theme_classic( base_size = 30) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  # add labels
+  labs( x = "Tundra", y = "Willow Ptarmigan per kmsq" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue")
+
+
+#view
+tund.zip
+ggsave("E:/gyrf_analysis/partial prediction plots 20oct23/wp_tundra_zip.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+
+```
+
+### Tussock
+
+```{r tussock ppp}
+### TUSSOCK
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+tussData <- data.frame( tundra = 0, tussock = tussock.std, tallshrub = 0, elev = 0, area = area.x )
+
+#predict partial relationship:
+tuss.p <- predict( p.abund, type = "lambda", newdata = tussData, 
+                          appendData = TRUE )
+
+tuss.zip <- predict( zip.abund, type = "lambda", newdata = tussData, 
+                          appendData = TRUE )
+#view
+head( tuss.p ); dim( tuss.p )
+head( tuss.zip ); dim( tuss.zip )
+
+
+### plot
+
+p.tuss <- cbind( tuss.p[,c("Predicted", "lower", "upper") ], tussock.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tussock.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 30) +
+  # add labels
+  #ylim(0, 45) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  labs( x = "Tussock", y = "Willow Ptarmigan per kmsq" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+#view
+p.tuss
+ggsave("E:/gyrf_analysis/partial prediction plots 20oct23/wp_tussock_poiss.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+
+### ZIP
+
+zip.tuss <- cbind( tuss.zip[,c("Predicted", "lower", "upper") ], tussock.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tussock.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 30) +
+  # add labels
+  #ylim(0, 45) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  labs( x = "Tussock", y = "Willow Ptarmigan per kmsq" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+#view
+zip.tuss
+
+ggsave("E:/gyrf_analysis/partial prediction plots 20oct23/wp_tussock_zip.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+
+```
+
+### Tallshrub
+
+```{r}
+### ALL SHRUB
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+tallData <- data.frame( tundra = 0, tussock = 0, tallshrub = tallshrub.std, elev = 0, area = area.x )
+
+#predict partial relationship:
+tall.p <- predict( p.abund, type = "lambda", newdata = tallData, 
+                          appendData = TRUE )
+
+tall.zip <- predict( zip.abund, type = "lambda", newdata = tallData, 
+                          appendData = TRUE )
+#view
+head( tall.p ); dim( tall.p )
+head( tall.zip ); dim( tall.zip )
+
+### plot
+
+p.tall <- cbind( tall.p[,c("Predicted", "lower", "upper") ], tallshrub.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tallshrub.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 45) +
+  theme_classic( base_size = 30 ) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  # add labels
+  labs( x = "Tall shrub", y = "Willow Ptarmigan per kmsq" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size= 65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+#view
+p.tall
+
+ggsave("E:/gyrf_analysis/partial prediction plots 20oct23/wp_tallshrub_poiss.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+
+
+### ZIP
+
+zip.tall <- cbind( tall.zip[,c("Predicted", "lower", "upper") ], tallshrub.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tallshrub.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 45) +
+  theme_classic( base_size = 30 ) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  # add labels
+  labs( x = "Tall shrub", y = "Willow Ptarmigan per kmsq" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size= 65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+#view
+zip.tall
+
+ggsave("E:/gyrf_analysis/partial prediction plots 20oct23/wp_tallshrub_zip.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+
+```
+
+## Density Model Partial Prediction Plots
+
+### Elevation
+
+```{r density model ppp}
+### ELEVATION
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+
+elevData <- data.frame( tundra = 0, tussock = 0, tallshrub = 0, elev = elev.std, area = area.x )
+
+#predict partial relationship:
+pred.elev.pd <- predict(ump, type = "lambda", newdata = elevData, 
+                          appendData = TRUE )
+
+pred.elev.zipd <- predict(umzip, type = "lambda", newdata = elevData, 
+                          appendData = TRUE )
+
+#view
+head( pred.elev.pd ); dim( pred.elev.pd )
+head( pred.elev.zipd); dim( pred.elev.zipd)
+
+### plot
+
+elev.pd <- cbind( pred.elev.pd[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 30) +
+  # add labels
+ # ylim(0, 13) +
+  labs( x = "Elevation (m)", y = "Willow Ptarmigan density (kmsq" ) +
+  theme(text=element_text(size=65)) +
+    # add band of confidence intervals
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+
+
+#view
+elev.pd
+ggsave("E:/gyrf_analysis/partial prediction plots 20oct23/wp_elev_poiss_density.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+
+
+# ZIP ppp
+elev.zipd <- cbind( pred.elev.zipd[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 35) +
+  # add labels
+ # ylim(0, 13) +
+  # add labels
+  labs( x = "Elevation (m)", y = "Willow Ptarmigan density (kmsq)" ) +
+  theme(text=element_text(size=65)) +
+  # add band of confidence intervals
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+
+
+#view
+elev.zipd
+ggsave("E:/gyrf_analysis/partial prediction plots 20oct23/wp_elev_zip_density.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+```
+
+### Tundra
+
+### Tussock
+
+### Tallshrub
