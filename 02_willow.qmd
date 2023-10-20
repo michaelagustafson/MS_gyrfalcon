@@ -378,4 +378,7 @@ breaks <- seq(0, 400, by = 50)
 
 
 umfGDR <- unmarkedFrameGDR(yDistance = yDist, yRemoval = yRem, numPrimary = 1, siteCovs = siCovs, obsCovs = NULL, yearlySiteCovs = oCovs, dist.breaks = breaks, unitsIn = 'm', period.lengths = NULL)
+
+
+saveRDS(umfGDR, "unmarkedFrameGDR_wiptmale.rds")
 ```
