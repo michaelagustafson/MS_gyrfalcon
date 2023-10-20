@@ -228,7 +228,7 @@ saveRDS(umfGDR, "unmarkedFrameGDR_wiptmale_20oct23.rds")
 
 ```
 
-## Distance Removal Model: Zero Inflated Poisson (ZIP)
+## Distance Removal Model: Zero Inflated Poisson (ZIP) vs Poisson
 
 using function gdistremoval() in 'unmarked'
 
@@ -357,13 +357,19 @@ cellStats(umzip.prediction, "sum") # 50 mil
 pabund.prediction <- predict(p.abund, type = "lambda", newdata = pred.surface)
 plot(pabund.prediction)
 cellStats(pabund.prediction, "sum") # 26 059, 196 mil
-
+writeRaster
 
 zipabund.prediction <- predict(zip.abund, type = "lambda", newdata = pred.surface)
 plot(zipabund.prediction)
 cellStats(zipabund.prediction, "sum") # 26 923, 906 mil
 
 
+
+# Write the raster to a GeoTIFF file
+writeRaster(zipabund.prediction, filename = names(zipabund.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
+
+
+writeRaster(pabund.prediction, filename = names(pabund.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
 ```
 
 ## Abundance Model Partial Prediction Plots
