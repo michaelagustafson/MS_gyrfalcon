@@ -22,6 +22,8 @@ getwd()
 library(tidyr)
 library(dplyr)
 library(unmarked)
+library(raster)
+library(rgdal)
 
 ```
 
@@ -194,9 +196,15 @@ env.s$id <- as.factor(env.s$id)
 ??left_join
 covs <- full_join(ydist.df, env.s, by = 'id')
 
+# add area to covs data
+# area of the survey area was a 400m radius circle
+# standardize the value by dividing by 10000
+
+covs$area <- pi*400*400/10000
+
 
 # site covariates
-siCovs <- covs[,c(9, 16:30)]
+siCovs <- covs[,c(9, 16:30, 44)]
 siCovs$id <- as.factor(siCovs$id)
 
 # in the frame these are actually the yearlySiteCovs
@@ -221,15 +229,135 @@ saveRDS(umfGDR, "unmarkedFrameGDR_wiptmale_20oct23.rds")
 
 ## Distance Removal Model: Zero Inflated Poisson (ZIP)
 
+using function gdistremoval() in 'unmarked'
+
 ```{r gdr zip model}
 
+# lambda:abundance, phi:availability (X - don't have these), removal:removal probablity covariates (these are my observer, date, etc), distance: detection function covariates
+
+# data: object of class unmarkedFrameGDR
+# keyfun: detection functions : "halfnorm", "hazard", "exp", or "uniform"
+# output: "abund" or "density"
+# unitsOut: units of density. either "ha" or "kmsq"
+# mixture: either "P" "NB" or "ZIP"
+# K: interger value speicying upper bound used in the integration
+# starts: vector of starting values for model parameters
+# methdod: optimization method used by optim
+# se: logical specifying whether or not to comput standard errors
+# engine:either "C" to use C++ code or "TMB" to use TMB for optimization
+# threads: more stuff about C++... OpenMP
+
+# set then standardize (dividing by 10,000) the area that was surveyed
+
+
+# my abundance covariates for wipt: tundra, tussock, tall shrub, elevation
+
+umzip <- gdistremoval(lambdaformula = ~1 + tundra + tussock + tallshrub + elev + offset(log(area)), phiformula = ~1, removalformula = ~1 + julian + min_after_sun + wind + observer, data = umfGDR, keyfun = "halfnorm", output = "density", unitsOut = "kmsq", mixture = "ZIP")
+
+
+summary(umzip)
+
+
+ump <- gdistremoval(lambdaformula = ~1 + tundra + tussock + tallshrub + elev + offset(log(area)), phiformula = ~1, removalformula = ~1 + julian + min_after_sun + wind + observer, data = umfGDR, keyfun = "halfnorm", output = "density", unitsOut = "kmsq", mixture = "P")
+
+summary(ump)
 
 
 
+zip.abund <- gdistremoval(lambdaformula = ~1 + tundra + tussock + tallshrub + elev + offset(log(area)), phiformula = ~1, removalformula = ~1 + julian + min_after_sun + wind + observer, data = umfGDR, keyfun = "halfnorm", output = "abund", mixture = "ZIP")
+summary(zip.abund)
+
+p.abund <- gdistremoval(lambdaformula = ~1 + tundra + tussock + tallshrub + elev + offset(log(area)), phiformula = ~1, removalformula = ~1 + julian + min_after_sun + wind + observer, data = umfGDR, keyfun = "halfnorm", output = "abund", mixture = "P")
+summary(p.abund)
+```
+
+## Spatial predictions
+
+```{r}
+
+# First need to scale study-wide rasters to match scaling of model:
+
+
+elev <- raster("E:/gyrf_analysis/MSgyrfalcon/dem_1k.tif")
+
+tallshrub <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tallshrub.tif")
+
+tundra <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tundra.tif")
+
+tussock <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tussock.tif")
 
 
 
+# standardize by each rasters mean and standard deviation
 
+# elev
+cellStats(elev, mean) #173.7808
+cellStats(elev, "sd") #120.5669
+
+elev.s <- (elev-173.7808)/120.5669
+
+# tundra
+cellStats(tundra, mean) #0.1608737
+cellStats(tundra, sd) #0.08171017
+
+tundra.s <- (tundra-0.1608737)/0.08171017
+
+# tussock
+cellStats(tussock, mean) #0.1202638
+cellStats(tussock, sd) #0.08615176
+
+tussock.s <- (tussock-0.1202638)/0.08615176
+
+# tallshrub
+cellStats(tallshrub, mean)
+cellStats(tallshrub, sd)
+
+tallshrub.s <- (tallshrub - 0.1321896)/0.07754615
+
+
+area.raster <- elev 
+values(area.raster) <- 1000*1000/10000 # area of a grid pixel, divided by 10000 to standardize
+
+# pull scaled observation/yearlySite covs from dataframe
+jul.raster <- elev # create a raster using one thats already in correct crs/scale
+values(jul.raster) <- mean(env.s$julian) # replace data with that of what you want - doing it with the mean scaled value of obs covs
+
+wind.raster <- elev 
+values(wind.raster) <- mean(env.s$wind)
+
+minsun.raster <- elev 
+values(minsun.raster) <- mean(env.s$min_after_sun)
+
+obs.raster <- elev 
+values(obs.raster) <- as.factor("DS")
+
+
+
+pred.surface <- stack(tundra.s, tussock.s, tallshrub.s, elev.s, area.raster, jul.raster, wind.raster, minsun.raster, obs.raster)
+
+names(pred.surface) <- c("tundra", "tussock", "tallshrub", "elev", "area", "julian", "wind", "min_after_sun", "observer")
+
+
+# now predict to study area!
+ump.prediction <- predict(ump, type="lambda", newdata=pred.surface)
+plot(ump.prediction)
+cellStats(ump.prediction, "sum") # 50mil
+
+
+
+umzip.prediction <- predict(umzip, type = "lambda", newdata = pred.surface)
+plot(umzip.prediction)
+cellStats(umzip.prediction, "sum") # 50 mil
+
+
+pabund.prediction <- predict(p.abund, type = "lambda", newdata = pred.surface)
+plot(pabund.prediction)
+cellStats(pabund.prediction, "sum") # 26 mil
+
+
+zipabund.prediction <- predict(zip.abund, type = "lambda", newdata = pred.surface)
+plot(zipabund.prediction)
+cellStats(zipabund.prediction, "sum") # 26 mil
 
 
 ```
