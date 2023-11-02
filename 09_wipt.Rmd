@@ -46,7 +46,7 @@ library(AHMbook)
 ```{r loaddata}
 
 all.obs <- read.csv(here("E:/gyrf_analysis/gyrf3/output/obs_3years.csv"))
-all.env2 <- read.csv(here("E:/gyrf_analysis/gyrf3/output/final_env_join_22Aug22.csv"))
+all.env2 <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_env_join_18Oct23.csv")
 
 # remove extra 'X' column from import
 all.obs <- all.obs[,-c(1)]
@@ -273,6 +273,9 @@ nbm4 <- gmultmix(
     mixture = "NB",
   umf.nb, engine="R" )
 
+confint(nbm4, type='lambda')
+confint(nbm4, type='det')
+
 summary(nbm4)
 
 nbm5 <- gmultmix(
@@ -284,6 +287,9 @@ nbm5 <- gmultmix(
   umf.nb, engine="R" )
 
 summary(nbm5)
+
+
+
 #rerun the Poisson model for model comparison
 nbm2 <- gmultmix(
   #abundance
@@ -428,7 +434,7 @@ allshrub = sum(tallshrub,openshrub,lowshrub,na.rm=TRUE)
 
 
 area.raster <- elev # CHANGE BACK TO ELEVATION ONCE GET RASTER LAYER
-values(area.raster) <- 1000*1000/10000 # area of a grid pixel, divided by 10000 to standardize
+values(area.raster) <- 1000*1000/10000 # 1km area of a grid pixel, divided by 10000 to standardize
 
 
 # find center/mean and std dev of scaled covariates to scale prediction surfaces above
@@ -482,21 +488,25 @@ values(obs.raster) <- as.factor("DS")
 
 
 
-pred.surface <- stack(tundra.s, tussock.s, allshrub.s, elev.s, area.raster, jul.raster, wind.raster, minsun.raster, obs.raster)
+#pred.surface <- stack(tundra.s, tussock.s, allshrub.s, elev.s, area.raster, jul.raster, wind.raster, minsun.raster, obs.raster)
 
-names(pred.surface) <- c("tundra", "tussock", "allshrub", "elev", "area", "julian", "wind", "min_after_sun", "observer")
+#names(pred.surface) <- c("tundra", "tussock", "allshrub", "elev", "area", "julian", "wind", "min_after_sun", "observer")
 
 pred.surface4 <- stack(tundra.s, tussock.s, tallshrub.s, elev.s, area.raster, jul.raster, wind.raster, minsun.raster, obs.raster)
 
 names(pred.surface4) <- c("tundra", "tussock", "tallshrub", "elev", "area", "julian", "wind", "min_after_sun", "observer")
 
-wipt.prediction <- predict(nbm1, type="lambda", newdata=pred.surface)
-cellStats(wipt.prediction, 'sum')
+#wipt.prediction <- predict(nbm1, type="lambda", newdata=pred.surface)
+#cellStats(wipt.prediction, 'sum')
 
 wipt.prediction4 <- predict(nbm4, type="lambda", newdata=pred.surface4)
 
 plot(wipt.prediction4)
 cellStats(wipt.prediction4, 'sum')
+cellStats(wipt.prediction4, 'max')
+cellStats(wipt.prediction4, 'min')
+cellStats(wipt.prediction4, 'mean')
+cellStats(wipt.prediction4, 'median')
 
 cellStats(wipt.prediction, 'mean')
 cellStats(wipt.prediction, 'median')
@@ -510,7 +520,7 @@ plot(wipt.prediction)
 
 #write.csv(wipt.freq1, here("model output/wiptcellcounts.csv"))
 
-writeRaster(wipt.prediction, filename = names(wipt.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
+writeRaster(wipt.prediction4, filename = names(wipt.prediction4), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
 ```
 
 
@@ -521,10 +531,91 @@ writeRaster(wipt.prediction, filename = names(wipt.prediction), bylayer = TRUE, 
 
 library(RColorBrewer)
 
+# obtain max and min values 
+maxv <- max(maxValue(wipt.prediction4))+1
+minv <- min(minValue(wipt.prediction4))
 
-plot(wipt.prediction, axes=FALSE, col=colorRampPalette(brewer.pal(3,"Blues"))(100))
+
+# set the breaks between min and max values
+brks <- seq(minv,maxv,by=.1)
+nbrks <- length(brks)-1
+r.range <- c(minv, maxv)
 
 
+for(i in seq_len(nlayers(wipt.prediction4))){
+  tmp <- wipt.prediction4[[i]]
+  plot(tmp, axes = FALSE, breaks=brks,col=colorRampPalette(brewer.pal(3,"Blues"))(100), legend = F, zlim=c(minv,maxv), 
+  main = names(tmp))
+  plot(wipt.prediction4, axes = FALSE, legend.only=TRUE, col=colorRampPalette(brewer.pal(3,"Blues"))(100),
+       legend.width=1, legend.shrink=0.75,
+       legend.args=list(text='value', side=4, font=2, line=2.5, cex=0.8))
+}
+
+
+
+par(xpd = TRUE)
+plot(wipt.prediction4, axes = FALSE, col=colorRampPalette(brewer.pal(3,"Blues"))(100), cex = .01)
+
+layer_number <- 1
+
+# Plot the selected layer
+common_min <- cellStats(wipt.prediction4[[3]], 'min')
+common_max <- cellStats(wipt.prediction4[[4]], 'max')
+
+common_breaks <- seq(common_min, common_max, length.out = 100)
+
+
+plot(wipt.prediction4, axes = FALSE, col=colorRampPalette(brewer.pal(3,"Blues"))(100))
+
+
+
+
+plot(wipt.prediction4[[2]], axes = FALSE, col=colorRampPalette(brewer.pal(3,"Blues"))(100))
+
+plot(wipt.prediction4[[3]], axes = FALSE, col=colorRampPalette(brewer.pal(3,"Blues"))(100))
+
+plot(wipt.prediction4[[4]], axes = FALSE, col=colorRampPalette(brewer.pal(3,"Blues"))(100))
+
+
+
+
+layer1 <- wipt.prediction4[[1]]
+layer2 <- wipt.prediction4[[2]]
+layer3 <- wipt.prediction4[[3]]
+layer4 <- wipt.prediction4[[4]]
+
+# Convert the layers to data frames
+df1 <- as.data.frame(layer1, xy = TRUE)
+df2 <- as.data.frame(layer2, xy = TRUE)
+df3 <- as.data.frame(layer3, xy = TRUE)
+df4 <- as.data.frame(layer4, xy = TRUE)
+
+
+ggplot(df1, aes(x = x, y = y)) +
+  geom_raster(aes(fill = Predicted)) +
+  scale_fill_gradient(low = "white", high = "blue") +
+  ggtitle("Layer 1")
+
+ggplot(df2, aes(x = x, y = y)) +
+  geom_raster(aes(fill = value)) +
+  scale_fill_gradient(low = "white", high = "red") +
+  ggtitle("Layer 2")
+
+ggplot(df3, aes(x = x, y = y)) +
+  geom_raster(aes(fill = value)) +
+  scale_fill_gradient(low = "white", high = "green") +
+  ggtitle("Layer 3")
+
+ggplot(df4, aes(x = x, y = y)) +
+  geom_raster(aes(fill = value)) +
+  scale_fill_gradient(low = "white", high = "orange") +
+  ggtitle("Layer 4")
+
+
+
+
+
+```
 sum_raster_cells <-cellStats(wipt.prediction, 'sum')
 sum_raster_cells
 
@@ -555,7 +646,6 @@ print(ci)
 
 cellStats(wipt.prediction, 'mean')
 
-```
 
 
 Partial Prediction Plots
@@ -577,7 +667,7 @@ n <- 100
 elevation.pp <- seq( min( all.env2[,"elev"]),max(500),
                    length.out = n )
 
-allshrub.pp <- seq( min( all.env2[,"allshrub"]),max( all.env2[,"allshrub"]),
+tallshrub.pp <- seq( min( all.env2[,"tallshrub"]),max( all.env2[,"tallshrub"]),
                    length.out = n )
 
 tundra.pp <- seq( min( all.env2[,"tundra"]),max( all.env2[,"tundra"]),
@@ -588,7 +678,7 @@ tussock.pp <- seq( min( all.env2[,"tussock"]),max( all.env2[,"tussock"]),
 
 #standardize predictors:
 elev.std <- scale( elevation.pp )
-allshrub.std <- scale( allshrub.pp )
+tallshrub.std <- scale( tallshrub.pp )
 tundra.std <- scale( tundra.pp )
 tussock.std <- scale( tussock.pp )
 area.x = pi*400*400/10000
@@ -598,10 +688,10 @@ area.x = pi*400*400/10000
 
 #combine standardized predictors into a new dataframe to predict partial relationship
 # for abundance submodel:
-abundData <- data.frame( tundra = 0, tussock = 0, allshrub = 0, elev = elev.std, area = area.x )
+abundData <- data.frame( tundra = 0, tussock = 0, tallshrub = 0, elev = elev.std, area = area.x )
 
 #predict partial relationship:
-pred.elev <- predict( nbm1, type = "lambda", newdata = abundData, 
+pred.elev <- predict( nbm4, type = "lambda", newdata = abundData, 
                           appendData = TRUE )
 #view
 head( pred.elev ); dim( pred.elev )
@@ -613,13 +703,12 @@ w.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) 
   # define x and y values
   ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
   #choose preset look
-  theme_classic( base_size = 15) +
+  theme_classic( base_size = 35) +
   # add labels
-  ylim(0, 13) +
-  labs( x = "Elevation (m)", y = "Willow Ptarmigan \n density" ) +
+  ylim(0, 15) +
+  labs( x = "Elevation (m)", y = "Density (males/0.5 kmsq)" ) +
   # add band of confidence intervals
-  theme(axis.title.y=element_blank()) +
-  theme(text=element_text(size=25)) +
+  theme(text=element_text(size=75)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
                size = 5, alpha = 0.5, fill = "lightblue3" ) +
@@ -627,7 +716,7 @@ w.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) 
   geom_line( size = 5, color = "darkblue" )
 #view
 w.elevp
-ggsave("E:/gyrf_analysis/partial prediction plots/wipt_elev.png", width = 20, height = 15, dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots 1nov23/wipt_elev_nb_tallshrubonly.png", width = 20, height = 15, dpi = 300)
 
 ```
 
@@ -636,10 +725,10 @@ ggsave("E:/gyrf_analysis/partial prediction plots/wipt_elev.png", width = 20, he
 
 #combine standardized predictors into a new dataframe to predict partial relationship
 # for abundance submodel:
-abundData <- data.frame( tundra = 0, tussock = tussock.std, allshrub = 0, elev = 0, area = area.x )
+abundData <- data.frame( tundra = 0, tussock = tussock.std, tallshrub = 0, elev = 0, area = area.x )
 
 #predict partial relationship:
-pred.tuss <- predict( nbm1, type = "lambda", newdata = abundData, 
+pred.tuss <- predict( nbm4, type = "lambda", newdata = abundData, 
                           appendData = TRUE )
 #view
 head( pred.tuss ); dim( pred.tuss )
@@ -653,10 +742,10 @@ w.tussp <- cbind( pred.tuss[,c("Predicted", "lower", "upper") ], tussock.pp ) %>
   #choose preset look
   theme_classic( base_size = 35) +
   # add labels
-  ylim(0, 45) +
+  ylim(0, 15) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
-  labs( x = "Tussock", y = "Willow Ptarmigan density" ) +
+  labs( x = "Tussock", y = "Density (males/0.5 kmsq)" ) +
   # add band of confidence intervals
   theme(text=element_text(size=75)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
@@ -666,7 +755,7 @@ w.tussp <- cbind( pred.tuss[,c("Predicted", "lower", "upper") ], tussock.pp ) %>
   geom_line( size = 5, color = "darkblue" )
 #view
 w.tussp
-ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tussock.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+ggsave("E:/gyrf_analysis/partial prediction plots 1nov23/wipt_tussock_nb_tallshrubonly.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
 
 ```
 
@@ -675,10 +764,10 @@ ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tussock.png", width = 20,
 
 #combine standardized predictors into a new dataframe to predict partial relationship
 # for abundance submodel:
-abundData <- data.frame( tundra = tundra.std, tussock = 0, allshrub = 0, elev = 0, area = area.x )
+abundData <- data.frame( tundra = tundra.std, tussock = 0, tallshrub = 0, elev = 0, area = area.x )
 
 #predict partial relationship:
-pred.tun <- predict( nbm1, type = "lambda", newdata = abundData, 
+pred.tun <- predict( nbm4, type = "lambda", newdata = abundData, 
                           appendData = TRUE )
 #view
 head( pred.tun ); dim( pred.tun )
@@ -690,12 +779,12 @@ w.tundp <- cbind( pred.tun[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   # define x and y values
   ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
   #choose preset look
-  ylim(0, 45) +
+  ylim(0, 15) +
   theme_classic( base_size = 35) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "Tundra", y = "Willow Ptarmigan density" ) +
+  labs( x = "Tundra", y = "Density (males/0.5 kmsq)" ) +
   # add band of confidence intervals
   theme(text=element_text(size=75)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
@@ -705,36 +794,36 @@ w.tundp <- cbind( pred.tun[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   geom_line( size = 5, color = "darkblue")
 #view
 w.tundp
-ggsave("E:/gyrf_analysis/partial prediction plots/wipt_tundra2.png", width = 20, height = 15, dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots 1nov23/wipt_tundra_nb_tallshrubonly.png", width = 20, height = 15, dpi = 300)
 
 ```
 
-```{r allppp}
-### ALL SHRUB
+```{r tallppp}
+### TALL SHRUB
 
 #combine standardized predictors into a new dataframe to predict partial relationship
 # for abundance submodel:
-abundData <- data.frame( tundra = 0, tussock = 0, allshrub = allshrub.std, elev = 0, area = area.x )
+abundData <- data.frame( tundra = 0, tussock = 0, tallshrub = tallshrub.std, elev = 0, area = area.x )
 
 #predict partial relationship:
-pred.alls <- predict( nbm1, type = "lambda", newdata = abundData, 
+pred.talls <- predict( nbm4, type = "lambda", newdata = abundData, 
                           appendData = TRUE )
 #view
-head( pred.alls ); dim( pred.alls )
+head( pred.talls ); dim( pred.talls )
 
 
 ### plot
 
-w.allsp <- cbind( pred.alls[,c("Predicted", "lower", "upper") ], allshrub.pp ) %>%
+w.tallsp <- cbind( pred.talls[,c("Predicted", "lower", "upper") ], tallshrub.pp ) %>%
   # define x and y values
-  ggplot(., aes( x = allshrub.pp, y = Predicted ) ) + 
+  ggplot(., aes( x = tallshrub.pp, y = Predicted ) ) + 
   #choose preset look
-  ylim(0, 45) +
+  ylim(0, 15) +
   theme_classic( base_size = 35 ) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "All shrub", y = "Willow Ptarmigan density" ) +
+  labs( x = "Tall shrub", y = "Density (males/0.5 kmsq)" ) +
   # add band of confidence intervals
   theme(text=element_text(size= 75)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
@@ -743,10 +832,10 @@ w.allsp <- cbind( pred.alls[,c("Predicted", "lower", "upper") ], allshrub.pp ) %
   # add mean line on top
   geom_line( size = 5, color = "darkblue" )
 #view
-w.allsp
+w.tallsp
 
 
-ggsave("E:/gyrf_analysis/partial prediction plots/wipt_allshrub2.png", width = 20, height = 15,dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots 1nov23/wipt_tallshrub_nb_tallshrubonly.png", width = 20, height = 15,dpi = 300)
 
 ```
 
