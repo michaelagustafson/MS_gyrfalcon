@@ -567,15 +567,17 @@ common_breaks <- seq(common_min, common_max, length.out = 100)
 
 plot(wipt.prediction4, axes = FALSE, col=colorRampPalette(brewer.pal(3,"Blues"))(100))
 
+# create layout 
+par(mfcol = c(2,2))
 
 
-
+plot(wipt.prediction4[[1]], axes = FALSE, col=colorRampPalette(brewer.pal(3,"Blues"))(100))
+ 
 plot(wipt.prediction4[[2]], axes = FALSE, col=colorRampPalette(brewer.pal(3,"Blues"))(100))
 
 plot(wipt.prediction4[[3]], axes = FALSE, col=colorRampPalette(brewer.pal(3,"Blues"))(100))
 
 plot(wipt.prediction4[[4]], axes = FALSE, col=colorRampPalette(brewer.pal(3,"Blues"))(100))
-
 
 
 
@@ -589,28 +591,6 @@ df1 <- as.data.frame(layer1, xy = TRUE)
 df2 <- as.data.frame(layer2, xy = TRUE)
 df3 <- as.data.frame(layer3, xy = TRUE)
 df4 <- as.data.frame(layer4, xy = TRUE)
-
-
-ggplot(df1, aes(x = x, y = y)) +
-  geom_raster(aes(fill = Predicted)) +
-  scale_fill_gradient(low = "white", high = "blue") +
-  ggtitle("Layer 1")
-
-ggplot(df2, aes(x = x, y = y)) +
-  geom_raster(aes(fill = value)) +
-  scale_fill_gradient(low = "white", high = "red") +
-  ggtitle("Layer 2")
-
-ggplot(df3, aes(x = x, y = y)) +
-  geom_raster(aes(fill = value)) +
-  scale_fill_gradient(low = "white", high = "green") +
-  ggtitle("Layer 3")
-
-ggplot(df4, aes(x = x, y = y)) +
-  geom_raster(aes(fill = value)) +
-  scale_fill_gradient(low = "white", high = "orange") +
-  ggtitle("Layer 4")
-
 
 
 
@@ -684,11 +664,12 @@ tussock.std <- scale( tussock.pp )
 area.x = pi*400*400/10000
 
 
+mean(tallshrub.std)
 ### ELEVATION
 
 #combine standardized predictors into a new dataframe to predict partial relationship
 # for abundance submodel:
-abundData <- data.frame( tundra = 0, tussock = 0, tallshrub = 0, elev = elev.std, area = area.x )
+abundData <- data.frame( tundra = mean(tundra.std), tussock = mean(tussock.std), tallshrub = mean(tallshrub.std), elev = elev.std, area = area.x )
 
 #predict partial relationship:
 pred.elev <- predict( nbm4, type = "lambda", newdata = abundData, 
@@ -716,7 +697,7 @@ w.elevp <- cbind( pred.elev[,c("Predicted", "lower", "upper") ], elevation.pp ) 
   geom_line( size = 5, color = "darkblue" )
 #view
 w.elevp
-ggsave("E:/gyrf_analysis/partial prediction plots 1nov23/wipt_elev_nb_tallshrubonly.png", width = 20, height = 15, dpi = 300)
+ggsave("E:/gyrf_analysis/partial prediction plots 1nov23/wipt_elev_nb_tallshrubonly_mean.png", width = 20, height = 15, dpi = 300)
 
 ```
 
@@ -725,7 +706,7 @@ ggsave("E:/gyrf_analysis/partial prediction plots 1nov23/wipt_elev_nb_tallshrubo
 
 #combine standardized predictors into a new dataframe to predict partial relationship
 # for abundance submodel:
-abundData <- data.frame( tundra = 0, tussock = tussock.std, tallshrub = 0, elev = 0, area = area.x )
+abundData <- data.frame( tundra = mean(tundra.std), tussock = tussock.std, tallshrub = mean(tallshrub.std), elev = mean(elev.std), area = area.x )
 
 #predict partial relationship:
 pred.tuss <- predict( nbm4, type = "lambda", newdata = abundData, 
@@ -755,7 +736,7 @@ w.tussp <- cbind( pred.tuss[,c("Predicted", "lower", "upper") ], tussock.pp ) %>
   geom_line( size = 5, color = "darkblue" )
 #view
 w.tussp
-ggsave("E:/gyrf_analysis/partial prediction plots 1nov23/wipt_tussock_nb_tallshrubonly.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+ggsave("E:/gyrf_analysis/partial prediction plots 1nov23/wipt_tussock_nb_tallshrubonly_mean.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
 
 ```
 
