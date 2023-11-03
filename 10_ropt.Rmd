@@ -542,7 +542,10 @@ ropt.prediction <- predict(nbm1, type='lambda', newdata=pred.surface)
 
 cellStats(ropt.prediction, 'mean')
 cellStats(ropt.prediction, 'median')
+cellStats(ropt.prediction, 'max')
+cellStats(ropt.prediction, 'min')
 
+cellStats(ropt.prediction, 'sum')
 
 plot(ropt.prediction)
 
