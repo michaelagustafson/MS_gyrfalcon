@@ -569,7 +569,13 @@ writeRaster(ropt.prediction, filename = names(ropt.prediction), bylayer = TRUE, 
 
 plot(ropt.prediction, axes=FALSE, col=colorRampPalette(brewer.pal(5,"Greens"))(100))
 
+plot(ropt.prediction[[1]], axes = FALSE, col=colorRampPalette(brewer.pal(3,"Greens"))(100))
+ 
+plot(ropt.prediction[[2]], axes = FALSE, col=colorRampPalette(brewer.pal(3,"Greens"))(100))
 
+plot(ropt.prediction[[3]], axes = FALSE, col=colorRampPalette(brewer.pal(3,"Greens"))(100))
+
+plot(ropt.prediction[[4]], axes = FALSE, col=colorRampPalette(brewer.pal(3,"Greens"))(100))
 
 cellStats(ropt.prediction, 'sum')
 sum_raster_cells
