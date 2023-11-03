@@ -751,6 +751,12 @@ plot(sq.prediction, axes=FALSE, col=colorRampPalette(brewer.pal(3,"Reds"))(100))
 
 sum_raster_cells <-cellStats(sq.prediction, 'sum')
 sum_raster_cells
+
+cellStats(sq.prediction, 'mean')
+cellStats(sq.prediction, 'min')
+cellStats(sq.prediction, 'max')
+cellStats(sq.prediction, 'sum')
+
 ```
 
 # Partial Prediction Plots
