@@ -749,6 +749,14 @@ writeRaster(sq.prediction, filename = names(sq.prediction), bylayer = TRUE, form
 library(RColorBrewer)
 plot(sq.prediction, axes=FALSE, col=colorRampPalette(brewer.pal(3,"Reds"))(100))
 
+plot(sq.prediction[[1]], axes = FALSE, col=colorRampPalette(brewer.pal(3,"Reds"))(100))
+ 
+plot(sq.prediction[[2]], axes = FALSE, col=colorRampPalette(brewer.pal(3,"Reds"))(100))
+
+plot(sq.prediction[[3]], axes = FALSE, col=colorRampPalette(brewer.pal(3,"Reds"))(100))
+
+plot(sq.prediction[[4]], axes = FALSE, col=colorRampPalette(brewer.pal(3,"Reds"))(100))
+
 sum_raster_cells <-cellStats(sq.prediction, 'sum')
 sum_raster_cells
 
