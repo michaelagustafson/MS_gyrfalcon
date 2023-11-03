@@ -359,14 +359,14 @@ Will be looking at c-hat for overdispersion, as well as chisq value and its p-va
 
 set.seed(1234)
 
-#(gof.fm2 <- parboot(object = fm.2, statistic = fitstats2, nsim = 1000, report = 1))
+#(gof.fm2 <- parboot(object = nbm4, statistic = fitstats2, nsim = 1000, report = 1))
 #gof.fm2
 
 #fit stats for NB model
-fitstats.nb1 <- function(nbm1) {
-  observed <- getY(nbm1@data)
-  expected <- fitted(nbm1)
-  resids <- residuals(nbm1)
+fitstats.nbm4 <- function(nbm4) {
+  observed <- getY(nbm4@data)
+  expected <- fitted(nbm4)
+  resids <- residuals(nbm4)
   n.obs <- apply(observed,1,sum,na.rm=TRUE)
   n.pred <- apply(expected,1,sum,na.rm=TRUE)
   sse <- sum(resids^2, na.rm=TRUE)
@@ -380,13 +380,13 @@ fitstats.nb1 <- function(nbm1) {
   return(out)
 }
 
-(gof.nb1 <- parboot(nbm1, fitstats.nb1, nsim = 1000, report = 1))
+(gof.nbm4 <- parboot(nbm4, fitstats.nbm4, nsim = 1000, report = 1))
 
 
-print(gof.nb1)
+print(gof.nbm4)
 
 
-saveRDS(gof.nb1, ("C:/Users/Ryan/OneDrive/Documents/MSgyrfalcon/wipt_gof_13Sep23.rds"))
+saveRDS(gof.nbm4, ("C:/Users/Ryan/OneDrive/Documents/MSgyrfalcon/wipt_gof_3Nov23.rds"))
 
 chat.nb <- gof.nb1@t0[2]/mean(gof.nb1@t.star[,2])
 chat.nb # 0.9479961
