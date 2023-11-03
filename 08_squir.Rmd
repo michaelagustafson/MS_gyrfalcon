@@ -303,13 +303,13 @@ colnames(all.env.scaled)
 
 
 colnames(all.env.scaled)
-cor.matrix <- as.matrix(all.env.scaled[,c(2:17, 19, 21, 23, 25)])
+cor.matrix <- as.matrix(all.env.scaled[,c(2:16, 18, 20, 22, 24)])
 # first test for normality
+cor.mat <- cor(cor.matrix)
 
+cor.mat <- as.data.frame(cor.mat)
 
-cor.mat <- rcorr(as.matrix(all.env.scaled[,c(2:17, 19, 21, 23, 25)]),type="pearson")
-cor.mat
-
+write.csv(cor.mat, "E:/gyrf_analysis/MSgyrfalcon/correlation matrix.csv")
 
 # no variables with correlation r>0.65 but elevation and range(steepness) 0.6
 # all shrubs has -0.65 with tundra and p-value = 0.000 so it has a moderate correlation
