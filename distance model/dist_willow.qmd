@@ -1,0 +1,647 @@
+---
+title: "distance and time willow"
+author: "Michaela Gustafson"
+format: docx
+editor: visual
+---
+
+# Distance and Time Removal: Willow Ptarmigan
+
+```{r clear workspace}
+#| echo: false
+# Clean your workspace to reset your R environment
+rm( list = ls() )
+# Check that you are in the right project folder
+getwd()
+```
+
+## Library
+
+```{r library}
+#| echo: false
+library(unmarked)
+library(raster)
+library(dplyr)
+library(ggplot2)
+library(here)
+```
+
+## Upload data
+
+'obs' is all male Willow Ptarmigan observations, including what point/site, time interval, and distance sighted. Each row is a unique observation.
+
+```{r obs data}
+#| echo: false
+obs <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wiptmalesonly_timeanddist_19Oct23.csv")
+obs <- obs[,-c(1)]
+```
+
+'env.s' is the scaled environmental data for each point/site (i.e. date, time, observer, wind speed, vegetation percentages within the observation area, etc.)
+
+env.s will be used to:
+
+1.  add empty sites to the distance and time matrices that are to be used to build the unmarkedFrameGDR
+2.  pull the observation and site covariates for the models
+
+```{r env data}
+#| echo: false
+env.s <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_df_timeanddist_18Oct23.csv")
+
+```
+
+## Format distance for unmarkedFrameGDR
+
+```{r format dist}
+
+# create distance bins
+my_bins <- seq(0, 400, by = 25)
+
+# assign each observation to a distance bin based on exact distance
+obs$distance_bin <- cut(obs$exact_distance, breaks = my_bins, include.lowest = TRUE)
+
+### add empty sites (sites that had no male Willow Ptarmigan observations) ###
+
+# first figure out what sites are missing
+obs_ids <- as.data.frame(obs$id)
+all_ids <- as.data.frame(env.s$id)
+
+empty_sites <- as.data.frame(setdiff(all_ids$`env.s$id`, obs_ids$`obs$id`))
+colnames(empty_sites)[1] <- "id" # change the name of the first column to 'id'
+
+
+# now need to create dataframe that attaches empty sites to end of sites where ptarmigan were observed so i can then match those 'levels' of sites to the data frame of only observed. It make sure the formatting code knows there are sites where ptarmigan weren't observed. But the empty sites need to be attached to the end of the observed sites in an actual dataframe and then those levels matched to the observed dataframe as 'ghost' levels or else the order will be messed up and it will put the 'observed' ptarmigan into sites that were actually empty.
+
+# so say the observed dataframe is df.obs = 'a, b, a, c, c, d' and you also had a site 'e' that was empty that you want to add to the levels. so a dataframe with all sites/levels, df.allsites = 'a, b, c, d, e'
+
+# if you were to try and match the levels like 'levels(df.obs$id) <- levels(df.allsites$id) it would change the order of the observed sites to 'a, b, c, d, e' so then e would be matched up with a row that has an observation. you need to create a df that matches the same pattern of repeated site observations then add all the missing ones at the end: df.match = 'a, b, a, c, c, d, e' so then when you match them up the first sequence of 'a, b, a, c, c, d' matches up, then e is put at the end with empty values
+
+
+# create my empty data frame I'm going to attach
+
+num_columns <- 4 # define number of columns same as 'obs'
+num_rows <- 738 #define number of rows(the number of empty sites I'm adding)
+col_names <- colnames(obs) # define what column names will be (the same as the frame i'm binding too)
+
+# create the dataframe wtih my specifications
+my_df <- data.frame(matrix(0, nrow = num_rows, ncol = num_columns))
+
+# and add column names
+colnames(my_df) <- col_names
+
+# and replace 'id' column with names of all empty sites
+my_df$id <- empty_sites$id
+
+# need to 'add' missing factor levels to the dataframe I'll actually be putting into the formatting code (creates 'ghost' sites for all empty sites)
+
+# make sure id columns in both dfs are factors
+obs$id <- as.factor(obs$id)
+my_df$id <- as.factor(my_df$id)
+
+# This code will modify the obs$id variable by adding the unique levels from both obs$id and my_df$id. It's important to note that this operation doesn't add the actual values from my_df$id to obs$id, it just extends the levels.
+
+obs$id <- factor(obs$id, levels = union(levels(obs$id), levels(my_df$id)))
+# check - should be 988
+levels(obs$id)
+
+### create distance matrix ###
+
+#make my bin breaks into a list so i can just put the object into the formatting insteading having to list them all out
+my.bin.list <- as.list(my_bins)
+
+# format distance data for the unmarkedFrameGDR:
+yDist <- formatDistData(obs, distCol = "exact_distance", transectNameCol = "id", dist.breaks = my.bin.list)
+
+# check that sample size is same (485), and can see in the Environment that there are 988 rows/sites
+sum(yDist)
+```
+
+## Format time intervals for unmarkedFrameGDR
+
+```{r format time}
+# can use same formatDistData function but replace distance with time-intervals
+
+yRem <- formatDistData(obs, distCol = "time_int", transectNameCol = "id", dist.breaks = c(0, 2, 4, 6, 8, 10))
+
+sum(yRem) # make sure its 485 and visually check that there are 988 rows/sites
+```
+
+## Build unmarkedFrameGDR
+
+```{r framebuild}
+
+# not sure if this makes a difference but put env covs in same order as yDist and yRem
+
+df1 <- data.frame(yDist)
+# Extract the row names of the matrix
+row_names <- rownames(df1)
+
+# Add the row names as a new column in the dataframe
+df1$id <- row_names
+
+# make sure both are factors
+df1$id <- as.factor(df1$id)
+env.s$id <- as.factor(env.s$id)
+
+# join scaled environmental to dataframe that is in same order as dist and time matrices
+covs_df <- full_join(df1, env.s, by = 'id')
+
+# add area to covs data
+# area of the survey area was a 400m radius circle
+# standardize the value by dividing by 10000
+
+covs_df$area <- pi*400*400/10000
+
+
+# site covariates: id, tundra, tussock, tallshrub, elevation, area
+siCovs <- covs_df[,c(17, 33:35, 38, 52)]
+siCovs$id <- as.factor(siCovs$id)
+
+# in the frame these are actually the yearlySiteCovs: id, julian, min after sunrise, observer, wind speed
+oCovs <- covs_df[,c(17, 39, 45, 49:50)]
+oCovs$id <- as.factor(oCovs$id)
+oCovs$observer <- as.factor(oCovs$observer)
+
+breaks <- seq(0, 400, by = 25)
+
+
+
+
+
+umfGDR <- unmarkedFrameGDR(yDistance = yDist, yRemoval = yRem, numPrimary = 1, siteCovs = siCovs, obsCovs = NULL, yearlySiteCovs = oCovs, dist.breaks = breaks, unitsIn = 'm', period.lengths = NULL)
+
+```
+
+## Distance Removal Model: Poisson vs ZIP
+
+using function gdistremoval() in 'unmarked'
+
+### Poisson
+
+```{r poisson}
+
+# lambda:abundance, phi:availability (X - don't have these), removal:removal probablity covariates (these are my observer, date, etc), distance: detection function covariates
+
+# data: object of class unmarkedFrameGDR
+# keyfun: detection functions : "halfnorm", "hazard", "exp", or "uniform"
+# output: "abund" or "density"
+# unitsOut: units of density. either "ha" or "kmsq"
+# mixture: either "P" "NB" or "ZIP"
+# K: interger value speicying upper bound used in the integration
+# starts: vector of starting values for model parameters
+# methdod: optimization method used by optim
+# se: logical specifying whether or not to comput standard errors
+# engine:either "C" to use C++ code or "TMB" to use TMB for optimization
+# threads: more stuff about C++... OpenMP
+
+
+# my abundance covariates for wipt: tundra, tussock, tall shrub, elevation
+
+um1.p <- gdistremoval(lambdaformula = ~1 + tundra + tussock + tallshrub + elev + offset(log(area)), phiformula = ~1, removalformula = ~1 + julian + min_after_sun + wind + observer, data = umfGDR, keyfun = "halfnorm", output = "density", unitsOut = "kmsq", mixture = "P")
+
+summary(um1.p)
+confint(um1.p, type = "lambda")
+confint(um1.p, type = "rem")
+```
+
+ZIP
+
+```{r zip}
+
+um1.zip <- gdistremoval(lambdaformula = ~1 + tundra + tussock + tallshrub + elev + offset(log(area)), phiformula = ~1, removalformula = ~1 + julian + min_after_sun + wind + observer, data = umfGDR, keyfun = "halfnorm", output = "density", unitsOut = "kmsq", mixture = "ZIP")
+
+summary(um1.zip)
+confint(um1.zip, type = "lambda")
+confint(um1.zip, type = "rem")
+```
+
+## Spatial Predictions
+
+Upload then standardize 1km resolution vegetation rasters.
+
+```{r}
+# First need to scale study-wide rasters to match scaling of model:
+
+
+elev <- raster("E:/gyrf_analysis/MSgyrfalcon/dem_1k.tif")
+
+tallshrub <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tallshrub.tif")
+
+tundra <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tundra.tif")
+
+tussock <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tussock.tif")
+
+
+
+# standardize by each rasters mean and standard deviation
+
+# elev
+cellStats(elev, mean) #173.7808
+cellStats(elev, sd) #120.5669
+
+elev.s <- (elev-173.7808)/120.5669
+
+# tundra
+cellStats(tundra, mean) #0.1608737
+cellStats(tundra, sd) #0.08171017
+
+tundra.s <- (tundra-0.1608737)/0.08171017
+
+# tussock
+cellStats(tussock, mean) #0.1202638
+cellStats(tussock, sd) #0.08615176
+
+tussock.s <- (tussock-0.1202638)/0.08615176
+
+# tallshrub
+cellStats(tallshrub, mean)
+cellStats(tallshrub, sd)
+
+tallshrub.s <- (tallshrub - 0.1321896)/0.07754615
+
+
+area.raster <- elev 
+values(area.raster) <- 1000*1000/10000 # area of a grid pixel, divided by 10000 to standardize
+
+# pull scaled observation/yearlySite covs from dataframe
+jul.raster <- elev # create a raster using one thats already in correct crs/scale
+values(jul.raster) <- mean(env.s$julian) # replace data with that of what you want - doing it with the mean scaled value of obs covs
+
+wind.raster <- elev 
+values(wind.raster) <- mean(env.s$wind)
+
+minsun.raster <- elev 
+values(minsun.raster) <- mean(env.s$min_after_sun)
+
+obs.raster <- elev 
+values(obs.raster) <- as.factor("DS") # "DS" is the intercept
+
+
+
+pred.surface <- stack(tundra.s, tussock.s, tallshrub.s, elev.s, area.raster, jul.raster, wind.raster, minsun.raster, obs.raster)
+
+names(pred.surface) <- c("tundra", "tussock", "tallshrub", "elev", "area", "julian", "wind", "min_after_sun", "observer")
+
+```
+
+### Poisson Prediction
+
+```{r poiss prediction}
+
+p.prediction <- predict(um1.p, type="lambda", newdata=pred.surface)
+
+plot(p.prediction)
+
+#look at some stats
+cellStats(p.prediction, "sum") # 47 million... yikes
+cellStats(p.prediction, "min") # minimum density of 22 males/km2
+cellStats(p.prediction, "max") # maximum density of 1 399 456 males/km2
+
+```
+
+### ZIP Prediction
+
+```{r zip prediction}
+
+zip.prediction <- predict(um1.zip, type = "lambda", newdata = pred.surface) 
+
+plot(zip.prediction) 
+
+#look at some stats
+cellStats(zip.prediction, "sum") # 49 mil
+cellStats(zip.prediction, "min") # minimum density of 32 males/km2
+cellStats(zip.prediction, "max") # maximum density of 1 134 393 males/km2
+```
+
+## Partial Prediction Plots: Poisson
+
+```{r ppp}
+#| echo: false
+# Estimate partial prediction plots for predictors with 95% CIs not overlapping zero:
+
+# Start by creating our datasets to predict over
+
+# how many values do we use:
+n <- 100
+
+# Use the observed values to define our range:
+
+# import unscaled predictors
+env <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_env_join_18Oct23.csv")
+
+elevation.pp <- seq( min( env[,"elev"]),max(500),
+                   length.out = n )
+
+tallshrub.pp <- seq( min( env[,"tallshrub"]),max( env[,"tallshrub"]),
+                   length.out = n )
+
+tundra.pp <- seq( min( env[,"tundra"]),max( env[,"tundra"]),
+                   length.out = n )
+
+tussock.pp <- seq( min( env[,"tussock"]),max( env[,"tussock"]),
+                   length.out = n )
+
+#standardize predictors:
+elev.std <- scale( elevation.pp )
+tallshrub.std <- scale( tallshrub.pp )
+tundra.std <- scale( tundra.pp )
+tussock.std <- scale( tussock.pp )
+area.x = (pi*400*400)/10000
+```
+
+### Tundra
+
+```{r tun}
+#| echo: false
+
+### TUNDRA
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+tundData <- data.frame( tundra = tundra.std, tussock = 0, tallshrub = 0, elev = 0, area = area.x )
+
+#predict partial relationship:
+tun.p <- predict( um1.p, type = "lambda", newdata = tundData, 
+                          appendData = TRUE )
+
+### plot
+
+tund.p <- cbind( tun.p[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 45) +
+  theme_classic( base_size = 30) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  # add labels
+  labs( x = "Tundra", y = "Relative density (males/kmsq)" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue")
+tund.p
+
+ggsave("E:/gyrf_analysis/partial prediction plots 7Nov23/dist_wipt_tundra.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+```
+
+### Tussock
+
+```{r tuss}
+#| echo: false
+
+tussData <- data.frame( tundra = 0, tussock = tussock.std, tallshrub = 0, elev = 0, area = area.x )
+
+#predict partial relationship:
+tuss.p <- predict( um1.p, type = "lambda", newdata = tussData, 
+                          appendData = TRUE )
+
+
+### plot
+
+p.tuss <- cbind( tuss.p[,c("Predicted", "lower", "upper") ], tussock.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tussock.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 30) +
+  # add labels
+  #ylim(0, 45) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  labs( x = "Tussock", y = "Relative density (males/kmsq)" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+#view
+p.tuss
+
+ggsave("E:/gyrf_analysis/partial prediction plots 7Nov23/dist_wipt_tussock.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+```
+
+### Tallshrub
+
+```{r tall}
+#| echo: false
+tallData <- data.frame( tundra = 0, tussock = 0, tallshrub = tallshrub.std, elev = 0, area = area.x )
+
+#predict partial relationship:
+tall.p <- predict( um1.p, type = "lambda", newdata = tallData, 
+                          appendData = TRUE )
+
+
+### plot
+
+p.tall <- cbind( tall.p[,c("Predicted", "lower", "upper") ], tallshrub.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tallshrub.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 45) +
+  theme_classic( base_size = 30 ) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  # add labels
+  labs( x = "Tall shrub", y = "Relative density (males/kmsq)" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size= 65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+#view
+p.tall
+
+ggsave("E:/gyrf_analysis/partial prediction plots 7Nov23/dist_wipt_tallshrub.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+```
+
+### Elevation
+
+```{r elev}
+#| echo: false
+elevData <- data.frame( tundra = 0, tussock = 0, tallshrub = 0, elev = elev.std, area = area.x )
+
+#predict partial relationship:
+pred.elev.p <- predict(um1.p, type = "lambda", newdata = elevData, 
+                          appendData = TRUE )
+
+
+### plot
+
+elev.p <- cbind( pred.elev.p[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 30) +
+  # add labels
+ # ylim(0, 13) +
+  labs( x = "Elevation (m)", y = "Relative density (male/kmsq)" ) +
+  theme(text=element_text(size=65)) +
+    # add band of confidence intervals
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+
+
+#view
+elev.p
+
+ggsave("E:/gyrf_analysis/partial prediction plots 7Nov23/dist_wipt_elevation.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+```
+
+## Partial Prediction Plots: ZIP
+
+### Tundra
+
+```{r tun zip}
+#| echo: false
+
+### TUNDRA
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+tundData <- data.frame( tundra = tundra.std, tussock = 0, tallshrub = 0, elev = 0, area = area.x )
+
+#predict partial relationship:
+tun.z <- predict( um1.zip, type = "lambda", newdata = tundData, 
+                          appendData = TRUE )
+
+### plot
+
+tund.z <- cbind( tun.z[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 45) +
+  theme_classic( base_size = 30) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  # add labels
+  labs( x = "Tundra", y = "Relative density (males/kmsq)" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue")
+tund.z
+
+ggsave("E:/gyrf_analysis/partial prediction plots 7Nov23/dist_wipt_tundra_zip.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+```
+
+### Tussock
+
+```{r tuss zip}
+#| echo: false
+
+tussData <- data.frame( tundra = 0, tussock = tussock.std, tallshrub = 0, elev = 0, area = area.x )
+
+#predict partial relationship:
+tuss.z <- predict( um1.zip, type = "lambda", newdata = tussData, 
+                          appendData = TRUE )
+
+
+### plot
+
+z.tuss <- cbind( tuss.z[,c("Predicted", "lower", "upper") ], tussock.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tussock.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 30) +
+  # add labels
+  #ylim(0, 45) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  labs( x = "Tussock", y = "Relative density (males/kmsq)" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+#view
+z.tuss
+
+ggsave("E:/gyrf_analysis/partial prediction plots 7Nov23/dist_wipt_tussock_zip.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+```
+
+### Tallshrub
+
+```{r tall zip}
+#| echo: false
+tallData <- data.frame( tundra = 0, tussock = 0, tallshrub = tallshrub.std, elev = 0, area = area.x )
+
+#predict partial relationship:
+tall.z <- predict( um1.zip, type = "lambda", newdata = tallData, 
+                          appendData = TRUE )
+
+
+### plot
+
+z.tall <- cbind( tall.z[,c("Predicted", "lower", "upper") ], tallshrub.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tallshrub.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 45) +
+  theme_classic( base_size = 30 ) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  # add labels
+  labs( x = "Tall shrub", y = "Relative density (males/kmsq)" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size= 65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+#view
+z.tall
+
+ggsave("E:/gyrf_analysis/partial prediction plots 7Nov23/dist_wipt_tallshrub_zip.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+```
+
+### Elevation
+
+```{r elev zip}
+#| echo: false
+elevData <- data.frame( tundra = 0, tussock = 0, tallshrub = 0, elev = elev.std, area = area.x )
+
+#predict partial relationship:
+pred.elev.z <- predict(um1.zip, type = "lambda", newdata = elevData, 
+                          appendData = TRUE )
+
+
+### plot
+
+elev.z <- cbind( pred.elev.z[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 30) +
+  # add labels
+ # ylim(0, 13) +
+  labs( x = "Elevation (m)", y = "Relative density (male/kmsq)" ) +
+  theme(text=element_text(size=65)) +
+    # add band of confidence intervals
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+
+
+#view
+elev.z
+
+ggsave("E:/gyrf_analysis/partial prediction plots 7Nov23/dist_wipt_elevation_zip.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+```
