@@ -1,0 +1,170 @@
+---
+title: "distance and time willow"
+author: "Michaela Gustafson"
+format: html
+editor: visual
+---
+
+# Distance and Time Removal: Willow Ptarmigan
+
+```{r clear workspace}
+# Clean your workspace to reset your R environment
+rm( list = ls() )
+# Check that you are in the right project folder
+getwd()
+```
+
+## Library
+
+```{r library}
+library(unmarked)
+library(raster)
+library(dplyr)
+library(ggplot2)
+library(here)
+```
+
+## Upload data
+
+'obs' is all male Willow Ptarmigan observations, including what point/site, time interval, and distance sighted. Each row is a unique observation.
+
+```{r obs data}
+
+obs <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wiptmalesonly_timeanddist_19Oct23.csv")
+obs <- obs[,-c(1)]
+```
+
+'env.s' is the scaled environmental data for each point/site (i.e. date, time, observer, wind speed, vegetation percentages within the observation area, etc.)
+
+env.s will be used to:
+
+1.  add empty sites to the distance and time matrices that are to be used to build the unmarkedFrameGDR
+2.  pull the observation and site covariates for the models
+
+```{r env data}
+
+env.s <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_df_timeanddist_18Oct23.csv")
+
+```
+
+## Format distance for unmarkedFrameGDR
+
+```{r}
+
+# create distance bins
+my_bins <- seq(0, 400, by = 25)
+
+# assign each observation to a distance bin based on exact distance
+obs$distance_bin <- cut(obs$exact_distance, breaks = my_bins, include.lowest = TRUE)
+
+### add empty sites (sites that had no male Willow Ptarmigan observations) ###
+
+# first figure out what sites are missing
+obs_ids <- as.data.frame(obs$id)
+all_ids <- as.data.frame(env.s$id)
+
+empty_sites <- as.data.frame(setdiff(all_ids$`env.s$id`, obs_ids$`obs$id`))
+colnames(empty_sites)[1] <- "id" # change the name of the first column to 'id'
+
+
+# now need to create dataframe that attaches empty sites to end of sites where ptarmigan were observed so i can then match those 'levels' of sites to the data frame of only observed. It make sure the formatting code knows there are sites where ptarmigan weren't observed. But the empty sites need to be attached to the end of the observed sites in an actual dataframe and then those levels matched to the observed dataframe as 'ghost' levels or else the order will be messed up and it will put the 'observed' ptarmigan into sites that were actually empty.
+
+# so say the observed dataframe is df.obs = 'a, b, a, c, c, d' and you also had a site 'e' that was empty that you want to add to the levels. so a dataframe with all sites/levels, df.allsites = 'a, b, c, d, e'
+
+# if you were to try and match the levels like 'levels(df.obs$id) <- levels(df.allsites$id) it would change the order of the observed sites to 'a, b, c, d, e' so then e would be matched up with a row that has an observation. you need to create a df that matches the same pattern of repeated site observations then add all the missing ones at the end: df.match = 'a, b, a, c, c, d, e' so then when you match them up the first sequence of 'a, b, a, c, c, d' matches up, then e is put at the end with empty values
+
+
+# create my empty data frame I'm going to attach
+
+num_columns <- 4 # define number of columns same as 'obs'
+num_rows <- 738 #define number of rows(the number of empty sites I'm adding)
+col_names <- colnames(obs) # define what column names will be (the same as the frame i'm binding too)
+
+# create the dataframe wtih my specifications
+my_df <- data.frame(matrix(0, nrow = num_rows, ncol = num_columns))
+
+# and add column names
+colnames(my_df) <- col_names
+
+# and replace 'id' column with names of all empty sites
+my_df$id <- empty_sites$id
+
+# need to 'add' missing factor levels to the dataframe I'll actually be putting into the formatting code (creates 'ghost' sites for all empty sites)
+
+# make sure id columns in both dfs are factors
+obs$id <- as.factor(obs$id)
+my_df$id <- as.factor(my_df$id)
+
+# This code will modify the obs$id variable by adding the unique levels from both obs$id and my_df$id. It's important to note that this operation doesn't add the actual values from my_df$id to obs$id, it just extends the levels.
+
+obs$id <- factor(obs$id, levels = union(levels(obs$id), levels(my_df$id)))
+# check - should be 988
+levels(obs$id)
+
+### create distance matrix ###
+
+#make my bin breaks into a list so i can just put the object into the formatting insteading having to list them all out
+my.bin.list <- as.list(my_bins)
+
+# format distance data for the unmarkedFrameGDR:
+yDist <- formatDistData(obs, distCol = "exact_distance", transectNameCol = "id", dist.breaks = my.bin.list)
+
+# check that sample size is same (485), and can see in the Environment that there are 988 rows/sites
+sum(yDist)
+```
+
+## Format time intervals for unmarkedFrameGDR
+
+```{r}
+# can use same formatDistData function but replace distance with time-intervals
+
+yRem <- formatDistData(obs, distCol = "time_int", transectNameCol = "id", dist.breaks = c(0, 2, 4, 6, 8, 10))
+
+sum(yRem) # make sure its 485 and visually check that there are 988 rows/sites
+```
+
+## Build unmarkedFrameGDR
+
+```{r}
+
+# not sure if this makes a difference but put env covs in same order as yDist and yRem
+
+df1 <- data.frame(yDist)
+# Extract the row names of the matrix
+row_names <- rownames(df1)
+
+# Add the row names as a new column in the dataframe
+df1$id <- row_names
+
+# make sure both are factors
+df1$id <- as.factor(df1$id)
+env.s$id <- as.factor(env.s$id)
+
+# join scaled environmental to dataframe that is in same order as dist and time matrices
+covs_df <- full_join(df1, env.s, by = 'id')
+
+# add area to covs data
+# area of the survey area was a 400m radius circle
+# standardize the value by dividing by 10000
+
+covs_df$area <- pi*400*400/10000
+
+
+# site covariates: id, tundra, tussock, tallshrub, elevation
+siCovs <- covs_df[,c(17, 33:35, 38)]
+siCovs$id <- as.factor(siCovs$id)
+
+# in the frame these are actually the yearlySiteCovs: id, julian, min after sunrise, observer, wind speed
+oCovs <- covs_df[,c(17, 39, 45, 49:50)]
+oCovs$id <- as.factor(oCovs$id)
+oCovs$observer <- as.factor(oCovs$observer)
+
+breaks <- seq(0, 400, by = 25)
+
+
+
+
+
+umfGDR <- unmarkedFrameGDR(yDistance = yDist, yRemoval = yRem, numPrimary = 1, siteCovs = siCovs, obsCovs = NULL, yearlySiteCovs = oCovs, dist.breaks = breaks, unitsIn = 'm', period.lengths = NULL)
+
+```
