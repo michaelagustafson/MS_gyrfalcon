@@ -287,7 +287,7 @@ names(pred.surface) <- c("tundra", "tussock", "tallshrub", "elev", "area", "juli
 
 p.prediction <- predict(um1.p, type="lambda", newdata=pred.surface)
 
-plot(p.prediction[[1]])
+plot(p.prediction)
 
 #look at some stats
 cellStats(p.prediction, "sum") # 47 million... yikes
@@ -302,10 +302,180 @@ cellStats(p.prediction, "max") # maximum density of 1 399 456 males/km2
 
 zip.prediction <- predict(um1.zip, type = "lambda", newdata = pred.surface) 
 
-plot(zip.prediction[[1]]) 
+plot(zip.prediction) 
 
 #look at some stats
 cellStats(zip.prediction, "sum") # 49 mil
 cellStats(zip.prediction, "min") # minimum density of 32 males/km2
 cellStats(zip.prediction, "max") # maximum density of 1 134 393 males/km2
+```
+
+## Partial Prediction Plots: Poisson
+
+```{r ppp}
+
+# Estimate partial prediction plots for predictors with 95% CIs not overlapping zero:
+
+# Start by creating our datasets to predict over
+
+# how many values do we use:
+n <- 100
+
+# Use the observed values to define our range:
+
+# import unscaled predictors
+env <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_env_join_18Oct23.csv")
+
+elevation.pp <- seq( min( env[,"elev"]),max(500),
+                   length.out = n )
+
+tallshrub.pp <- seq( min( env[,"tallshrub"]),max( env[,"tallshrub"]),
+                   length.out = n )
+
+tundra.pp <- seq( min( env[,"tundra"]),max( env[,"tundra"]),
+                   length.out = n )
+
+tussock.pp <- seq( min( env[,"tussock"]),max( env[,"tussock"]),
+                   length.out = n )
+
+#standardize predictors:
+elev.std <- scale( elevation.pp )
+tallshrub.std <- scale( tallshrub.pp )
+tundra.std <- scale( tundra.pp )
+tussock.std <- scale( tussock.pp )
+area.x = (pi*400*400)/10000
+```
+
+### Tundra
+
+```{r}
+### TUNDRA
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+tundData <- data.frame( tundra = tundra.std, tussock = 0, tallshrub = 0, elev = 0, area = area.x )
+
+#predict partial relationship:
+tun.p <- predict( um1.p, type = "lambda", newdata = tundData, 
+                          appendData = TRUE )
+
+### plot
+
+tund.p <- cbind( tun.p[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 45) +
+  theme_classic( base_size = 30) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  # add labels
+  labs( x = "Tundra", y = "Relative density (males/kmsq)" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue")
+tund.p
+```
+
+### Tussock
+
+```{r}
+tussData <- data.frame( tundra = 0, tussock = tussock.std, tallshrub = 0, elev = 0, area = area.x )
+
+#predict partial relationship:
+tuss.p <- predict( um1.p, type = "lambda", newdata = tussData, 
+                          appendData = TRUE )
+
+
+### plot
+
+p.tuss <- cbind( tuss.p[,c("Predicted", "lower", "upper") ], tussock.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tussock.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 30) +
+  # add labels
+  #ylim(0, 45) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  labs( x = "Tussock", y = "Relative density (males/kmsq)" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+#view
+p.tuss
+```
+
+### Tallshrub
+
+```{r}
+tallData <- data.frame( tundra = 0, tussock = 0, tallshrub = tallshrub.std, elev = 0, area = area.x )
+
+#predict partial relationship:
+tall.p <- predict( um1.p, type = "lambda", newdata = tallData, 
+                          appendData = TRUE )
+
+
+### plot
+
+p.tall <- cbind( tall.p[,c("Predicted", "lower", "upper") ], tallshrub.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tallshrub.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 45) +
+  theme_classic( base_size = 30 ) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  # add labels
+  labs( x = "Tall shrub", y = "Relative density (males/kmsq)" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size= 65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+#view
+p.tall
+```
+
+### Elevation
+
+```{r}
+elevData <- data.frame( tundra = 0, tussock = 0, tallshrub = 0, elev = elev.std, area = area.x )
+
+#predict partial relationship:
+pred.elev.p <- predict(um1.p, type = "lambda", newdata = elevData, 
+                          appendData = TRUE )
+
+
+### plot
+
+elev.p <- cbind( pred.elev.p[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 30) +
+  # add labels
+ # ylim(0, 13) +
+  labs( x = "Elevation (m)", y = "Relative density (male/kmsq)" ) +
+  theme(text=element_text(size=65)) +
+    # add band of confidence intervals
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+
+
+#view
+elev.p
 ```
