@@ -313,7 +313,7 @@ cellStats(zip.prediction, "max") # maximum density of 1 134 393 males/km2
 ## Partial Prediction Plots: Poisson
 
 ```{r ppp}
-
+#| echo: false
 # Estimate partial prediction plots for predictors with 95% CIs not overlapping zero:
 
 # Start by creating our datasets to predict over
@@ -349,6 +349,8 @@ area.x = (pi*400*400)/10000
 ### Tundra
 
 ```{r}
+#| echo: false
+
 ### TUNDRA
 
 #combine standardized predictors into a new dataframe to predict partial relationship
@@ -384,6 +386,8 @@ tund.p
 ### Tussock
 
 ```{r}
+#| echo: false
+
 tussData <- data.frame( tundra = 0, tussock = tussock.std, tallshrub = 0, elev = 0, area = area.x )
 
 #predict partial relationship:
