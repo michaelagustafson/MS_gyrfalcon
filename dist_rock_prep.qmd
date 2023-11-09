@@ -1,0 +1,73 @@
+---
+title: "dist_rock"
+format: docx
+editor: visual
+---
+
+```{r clear space}
+
+# Clean your workspace to reset your R environment
+rm( list = ls() )
+# Check that you are in the right project folder
+getwd()
+```
+
+## Library
+
+```{r library}
+
+library(tidyr)
+library(dplyr)
+library(unmarked)
+library(raster)
+library(rgdal)
+library(ggplot2)
+```
+
+## Load Data
+
+```{r}
+
+all.obs <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_obs_17Oct23.csv")
+all.obs <- all.obs[,-c(1)]
+
+all.obs$exact_distance[all.obs$species != "ROPT"] <- NA
+  
+
+rock.only <- filter(all.obs, species == "ROPT")
+
+#remove single F and single U
+
+males <- filter(rock.only, sex != "F") # there were no single female observations
+males2 <- filter(males, sex != "U")
+
+
+
+# remove females and unknowns from grouped counts
+males2$count <- as.numeric(males2$count)
+males2$sex <- as.factor(males2$sex)
+unique(males2$sex)
+
+#MF
+males2$count[males2$sex == "MF"] <- males2$count[males2$sex == "MF"] - 1
+
+#M,F
+males2$count[males2$sex == "M,F"] <- males2$count[males2$sex == "M,F"] - 1
+
+#M,U
+males2$count[males2$sex == "M,U"] <- males2$count[males2$sex == "M,U"] - 1
+
+
+
+# now take only columns needed then uncount groups so each row is one bird
+
+males3 <- males2[,c(1,4,5,8)]
+
+males4 <- males3 %>%
+   uncount(count)
+
+
+males5 <- data.frame(males4)
+write.csv(males5, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/rockmalesonly_timedist_9nov23.csv")
+
+```
