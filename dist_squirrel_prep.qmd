@@ -1,0 +1,53 @@
+---
+title: "squirrel dist prep"
+format: docx
+editor: visual
+---
+
+```{r}
+# Clean your workspace to reset your R environment
+rm( list = ls() )
+# Check that you are in the right project folder
+getwd()
+```
+
+## Library
+
+```{r}
+
+library(tidyr)
+library(dplyr)
+library(unmarked)
+library(raster)
+library(rgdal)
+library(ggplot2)
+```
+
+## Load Data
+
+```{r}
+all.obs <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_obs_17Oct23.csv")
+all.obs <- all.obs[,-c(1)]
+
+all.obs$species <- as.factor(all.obs$species)
+
+#have to change non-target species distances to 0 or they keep coming back in further dataframes
+all.obs$exact_distance[!(all.obs$species == "SQUIR" | all.obs$species == "AGSQ")] <- NA
+
+
+squirs <- filter(all.obs, species == "SQUIR" | species == "AGSQ")
+
+
+# now take only columns needed then uncount groups so each row is one bird
+
+squir2 <- squirs[,c(1,4,5,8)]
+squir2$count <- as.numeric(squir2$count)
+
+squir3 <- squir2 %>%
+   uncount(count)
+
+
+squir3 <- data.frame(squir3)
+
+write.csv(squir3, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/squironly_timedist_10nov23.csv")
+```
