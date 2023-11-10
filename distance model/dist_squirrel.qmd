@@ -153,3 +153,48 @@ breaks <- seq(0, 400, by = 25)
 
 umfGDR <- unmarkedFrameGDR(yDistance = yDist, yRemoval = yRem, numPrimary = 1, siteCovs = siCovs, obsCovs = NULL, yearlySiteCovs = oCovs, dist.breaks = breaks, unitsIn = 'm', period.lengths = NULL)
 ```
+
+## Distance Removal Model: Poisson vs ZIP
+
+using function gdistremoval() in 'unmarked'
+
+### Poisson
+
+```{r}
+# lambda:abundance, phi:availability (X - don't have these), removal:removal probablity covariates (these are my observer, date, etc), distance: detection function covariates
+
+# data: object of class unmarkedFrameGDR
+# keyfun: detection functions : "halfnorm", "hazard", "exp", or "uniform"
+# output: "abund" or "density"
+# unitsOut: units of density. either "ha" or "kmsq"
+# mixture: either "P" "NB" or "ZIP"
+# K: interger value speicying upper bound used in the integration
+# starts: vector of starting values for model parameters
+# methdod: optimization method used by optim
+# se: logical specifying whether or not to comput standard errors
+# engine:either "C" to use C++ code or "TMB" to use TMB for optimization
+# threads: more stuff about C++... OpenMP
+
+
+# my abundance covariates for wipt: tundra, tussock, tall shrub, elevation
+
+um1.p <- gdistremoval(lambdaformula = ~1 + tundra + lowshrub + sparseveg + elev + offset(log(area)), phiformula = ~1, removalformula = ~1 + julian + min_after_sun + wind + observer, data = umfGDR, keyfun = "halfnorm", output = "density", unitsOut = "kmsq", mixture = "P")
+
+summary(um1.p)
+confint(um1.p, type = "lambda")
+confint(um1.p, type = "rem")
+```
+
+### ZIP
+
+```{r}
+um1.zip <- gdistremoval(lambdaformula = ~1 + tundra + lowshrub + sparseveg + elev + offset(log(area)), phiformula = ~1, removalformula = ~1 + julian + min_after_sun + wind + observer, data = umfGDR, keyfun = "halfnorm", output = "density", unitsOut = "kmsq", mixture = "ZIP")
+
+summary(um1.zip)
+confint(um1.zip, type = "lambda")
+confint(um1.zip, type = "rem")
+```
+
+## Spatial Predictions
+
+Upload then standardize 1km resolution vegetation rasters.
