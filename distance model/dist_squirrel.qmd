@@ -198,3 +198,93 @@ confint(um1.zip, type = "rem")
 ## Spatial Predictions
 
 Upload then standardize 1km resolution vegetation rasters.
+
+```{r}
+# First need to scale study-wide rasters to match scaling of model:
+
+
+elev <- raster("E:/gyrf_analysis/MSgyrfalcon/1k rasters/dem_1k.tif")
+
+lowshrub <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/distance model/dist_data/lowshrub.tif")
+
+tundra <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/distance model/dist_data/tundra.tif")
+
+sparseveg <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/distance model/dist_data/sparseveg.tif")
+
+
+
+# standardize by each rasters mean and standard deviation
+
+# elev
+cellStats(elev, mean) #173.7808
+cellStats(elev, sd) #120.5669
+
+elev.s <- (elev-173.7808)/120.5669
+
+# tundra
+cellStats(tundra, mean) #0.1608737
+cellStats(tundra, sd) #0.08171017
+
+tundra.s <- (tundra-0.1608737)/0.08171017
+
+# lowshrub
+cellStats(lowshrub, mean) #0.1444925
+cellStats(lowshrub, sd) #0.07447781
+
+lowshrub.s <- (lowshrub-0.1444925)/0.07447781
+
+# sparseveg
+cellStats(sparseveg, mean) #0.1111009
+cellStats(sparseveg, sd) #0.08905826
+
+sparseveg.s <- (sparseveg - 0.1111009)/0.08905826
+
+
+area.raster <- elev 
+values(area.raster) <- 1000*1000/10000 # area of a grid pixel, divided by 10000 to standardize
+
+# pull scaled observation/yearlySite covs from dataframe
+jul.raster <- elev # create a raster using one thats already in correct crs/scale
+values(jul.raster) <- mean(scaled$julian) # replace data with that of what you want - doing it with the mean scaled value of obs covs
+
+wind.raster <- elev 
+values(wind.raster) <- mean(scaled$wind)
+
+minsun.raster <- elev 
+values(minsun.raster) <- mean(scaled$min_after_sun)
+
+obs.raster <- elev 
+values(obs.raster) <- as.factor("DS") # "DS" is the intercept
+
+
+
+pred.surface <- stack(tundra.s, lowshrub.s, sparseveg.s, elev.s, area.raster, jul.raster, wind.raster, minsun.raster, obs.raster)
+
+names(pred.surface) <- c("tundra", "lowshrub", "sparseveg", "elev", "area", "julian", "wind", "min_after_sun", "observer")
+```
+
+### Poisson Prediction
+
+```{r}
+p.prediction <- predict(um1.p, type="lambda", newdata=pred.surface)
+
+plot(p.prediction)
+
+#look at some stats
+cellStats(p.prediction, "sum") # 2 755 724.6
+cellStats(p.prediction, "min") # minimum density of 20.5 squirrels/km2
+cellStats(p.prediction, "max") # maximum density of 3 339 squirrels/km2
+```
+
+### ZIP Prediction
+
+```{r}
+zip.prediction <- predict(um1.zip, type = "lambda", newdata = pred.surface) 
+
+plot(zip.prediction) 
+
+#look at some stats
+cellStats(zip.prediction, "sum") # 18 778 386 mil
+cellStats(zip.prediction, "min") # minimum density of 321 squirrels /km2
+cellStats(zip.prediction, "max") # maximum density of 8 336 squirrels/km2
+```
