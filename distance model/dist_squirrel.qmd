@@ -1,0 +1,155 @@
+---
+title: "dist squir model"
+format: docx
+editor: visual
+---
+
+# Arctic ground squirrel distance removal model
+
+```{r clean ws}
+# Clean your workspace to reset your R environment
+rm( list = ls() )
+# Check that you are in the right project folder
+getwd()
+```
+
+## Library
+
+```{r library}
+library(tidyr)
+library(dplyr)
+library(unmarked)
+library(raster)
+library(rgdal)
+library(ggplot2)
+```
+
+## Load Data
+
+```{r}
+squirs <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/squironly_timedist_10nov23.csv")
+squirs <- squirs[,-c(1)]
+
+scaled <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_df_18Oct23.csv")
+scaled <- scaled[,-c(1, 3:7)]
+```
+
+## Create unmarkedFrameGDR
+
+### Distance Matrix
+
+```{r}
+# create a separate df to manipulate for distance data
+squir2 <- data.frame(squirs)
+
+# now i need to get exact distances to 'binned data'
+
+
+my.bins <- seq(0, 400, by = 25)
+
+squir2$distance_bin <- cut(squir2$exact_distance, breaks = my.bins, include.lowest = TRUE)
+
+# add empty sites (sites that had no WIPT male observations)
+
+# first figure out what sites are missing
+obs.ids <- as.data.frame(squir2$id)
+all.ids <- as.data.frame(scaled$id)
+
+missing_df <- as.data.frame(setdiff(all.ids$`scaled$id`, obs.ids$`squir2$id`))
+colnames(missing_df)[1] <- "id" # change the name of the first column to 'id'
+
+# now need to create dataframe that attaches empty sites to end of sites where ptarmigan were observed so i can then match those 'levels' of sites to the data frame of only observed. It make sure the formatting code knows there are sites where ptarmigan weren't observed. But the empty sites need to be attached to the end of the observed sites in an actual dataframe and then those levels matched to the observed dataframe as 'ghost' levels or else the order will be messed up and it will put the 'observed' ptarmigan into sites that were actually empty.
+
+# so say the observed dataframe is df.obs = 'a, b, a, c, c, d' and you also had a site 'e' that was empty that you want to add to the levels. so a dataframe with all sites/levels, df.allsites = 'a, b, c, d, e'
+
+# if you were to try and match the levels like 'levels(df.obs$id) <- levels(df.allsites$id) it would change the order of the observed sites to 'a, b, c, d, e' so then e would be matched up with a row that has an observation. you need to create a df that matches the same pattern of repeated site observations then add all the missing ones at the end: df.match = 'a, b, a, c, c, d, e' so then when you match them up the first sequence of 'a, b, a, c, c, d' matches up, then e is put at the end with empty values
+
+
+# create my empty data frame I'm going to attach
+
+num_columns <- 4 # define number of columns
+num_rows <- 946 #define number of rows(the number of empty sites I'm adding)
+col_names <- colnames(squir2) # define what column names will be (the same as the frame i'm binding too)
+
+# create the dataframe wtih my specifications
+my_df <- data.frame(matrix(0, nrow = num_rows, ncol = num_columns))
+
+# and add column names
+colnames(my_df) <- col_names
+
+# and replace 'id' column with names of all empty sites
+my_df$id <- missing_df$id
+
+# need to 'add' missing factor levels to the dataframe I'll actually be putting into the formatting code (creates 'ghost' sites for all empty sites)
+
+
+squir2$id <- as.factor(squir2$id)
+my_df$id <- as.factor(my_df$id)
+
+squir2$id <- factor(squir2$id, levels = union(levels(squir2$id), levels(my_df$id)))
+levels(squir2$id) # should be 988
+
+########### format distance data for frame########
+#make my bin breaks into a list so i can just put the object into the formatting insteading having to list them all out
+my.bin.list <- as.list(my.bins)
+
+# format distance data for the unmarkedFrameGDR:
+yDist <- formatDistData(squir2, distCol = "exact_distance", transectNameCol = "id", dist.breaks = my.bin.list)
+
+
+sum(yDist) # should be 80 and visually check that lenght is 988
+```
+
+### Time Matrix
+
+```{r}
+# can use same formatDistData function but replace distance with time-intervals
+
+yRem <- formatDistData(squir2, distCol = "time_int", transectNameCol = "id", dist.breaks = c(0, 2, 4, 6, 8, 10))
+
+sum(yRem) # make sure its 80 and visually check that there are 988 rows/sites
+```
+
+## Build unmarkedFrameGDR
+
+```{r}
+# not sure if this makes a difference but put env covs in same order as yDist and yRem
+
+df1 <- data.frame(yDist)
+# Extract the row names of the matrix
+row_names <- rownames(df1)
+
+# Add the row names as a new column in the dataframe
+df1$id <- row_names
+
+# make sure both are factors
+df1$id <- as.factor(df1$id)
+scaled$id <- as.factor(scaled$id)
+
+# join scaled environmental to dataframe that is in same order as dist and time matrices
+covs_df <- full_join(df1, scaled, by = 'id')
+
+# add area to covs data
+# area of the survey area was a 400m radius circle
+# standardize the value by dividing by 10000
+
+covs_df$area <- pi*400*400/10000
+
+
+# site covariates: id, low shrub, sparse veg, tundra, elevation, area
+siCovs <- covs_df[,c(17, 23, 26, 28, 32, 46)]
+siCovs$id <- as.factor(siCovs$id)
+
+# in the frame these are actually the yearlySiteCovs: id, julian, min after sunrise, observer, wind speed
+oCovs <- covs_df[,c(17, 33, 39, 43:44)]
+oCovs$id <- as.factor(oCovs$id)
+oCovs$observer <- as.factor(oCovs$observer)
+
+breaks <- seq(0, 400, by = 25)
+
+
+
+
+
+umfGDR <- unmarkedFrameGDR(yDistance = yDist, yRemoval = yRem, numPrimary = 1, siteCovs = siCovs, obsCovs = NULL, yearlySiteCovs = oCovs, dist.breaks = breaks, unitsIn = 'm', period.lengths = NULL)
+```
