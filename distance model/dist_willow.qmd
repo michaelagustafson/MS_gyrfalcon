@@ -244,13 +244,13 @@ Upload then standardize 1km resolution vegetation rasters.
 # First need to scale study-wide rasters to match scaling of model:
 
 
-elev <- raster("E:/gyrf_analysis/MSgyrfalcon/dem_1k.tif")
+elev <- raster("E:/gyrf_analysis/MSgyrfalcon/1k rasters/dem_1k.tif")
 
-tallshrub <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tallshrub.tif")
+tallshrub <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/distance model/dist_data/tallshrub.tif")
 
-tundra <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tundra.tif")
+tundra <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/distance model/dist_data/tundra.tif")
 
-tussock <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/1k prediction rasters/tussock.tif")
+tussock <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/distance model/dist_data/tussock.tif")
 
 
 
