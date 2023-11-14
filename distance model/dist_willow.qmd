@@ -2,7 +2,6 @@
 title: "distance and time willow"
 author: "Michaela Gustafson"
 format: docx
-editor: visual
 ---
 
 # Distance and Time Removal: Willow Ptarmigan
@@ -234,8 +233,6 @@ confint(time.model, type = "det")
 
 ```
 
-
-
 ## Spatial Predictions
 
 Upload then standardize 1km resolution vegetation rasters.
@@ -318,6 +315,7 @@ cellStats(p.prediction, "sum") # 47 million... yikes
 cellStats(p.prediction, "min") # minimum density of 22 males/km2
 cellStats(p.prediction, "max") # maximum density of 1 399 456 males/km2
 
+writeRaster(p.prediction, filename = names(p.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
 ```
 
 ### ZIP Prediction
@@ -332,9 +330,12 @@ plot(zip.prediction)
 cellStats(zip.prediction, "sum") # 49 mil
 cellStats(zip.prediction, "min") # minimum density of 32 males/km2
 cellStats(zip.prediction, "max") # maximum density of 1 134 393 males/km2
+
+writeRaster(zip.prediction, filename = names(zip.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
 ```
 
 ### Time Poisson Prediction
+
 ```{r}
 time.prediction <- predict(time.model, type = "state", newdata = pred.surface) 
 
@@ -344,9 +345,9 @@ plot(time.prediction)
 cellStats(time.prediction, "sum") # 223 802
 cellStats(time.prediction, "min") # minimum density of 0.106 males/km2
 cellStats(time.prediction, "max") # maximum density of 6 582 males/km2
+
+writeRaster(time.prediction, filename = names(time.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
 ```
-
-
 
 ## Partial Prediction Plots: Poisson
 
@@ -682,10 +683,10 @@ elev.z
 ggsave("E:/gyrf_analysis/partial prediction plots 7Nov23/dist_wipt_elevation_zip.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
 ```
 
-
 ## Partial Prediction Plots: Time Removal Poisson
 
 ### Tundra
+
 ```{r}
 #| echo: false
 
@@ -761,6 +762,7 @@ ggsave("E:/gyrf_analysis/partial prediction plots 14Nov23/dist_wipt_tussock_time
 ```
 
 ### Tallshrub
+
 ```{r}
 #| echo: false
 tallData <- data.frame( tundra = 0, tussock = 0, tallshrub = tallshrub.std, elev = 0, area = area.x )
@@ -796,6 +798,7 @@ ggsave("E:/gyrf_analysis/partial prediction plots 14Nov23/dist_wipt_tallshrub_ti
 ```
 
 ### Elevation
+
 ```{r}
 #| echo: false
 elevData <- data.frame( tundra = 0, tussock = 0, tallshrub = 0, elev = elev.std, area = area.x )
@@ -829,17 +832,3 @@ elev.t
 
 ggsave("E:/gyrf_analysis/partial prediction plots 14Nov23/dist_wipt_elevation_time.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
