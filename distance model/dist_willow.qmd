@@ -32,7 +32,7 @@ library(here)
 
 ```{r obs data}
 #| echo: false
-obs <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wiptmalesonly_timeanddist_19Oct23.csv")
+obs <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/distance model/dist_data/wiptmalesonly_timeanddist_19Oct23.csv")
 obs <- obs[,-c(1)]
 ```
 
@@ -45,7 +45,7 @@ env.s will be used to:
 
 ```{r env data}
 #| echo: false
-env.s <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_df_timeanddist_18Oct23.csv")
+env.s <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/distance model/dist_data/wipt_male_df_timeanddist_18Oct23.csv")
 
 ```
 
