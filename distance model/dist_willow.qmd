@@ -46,7 +46,6 @@ env.s will be used to:
 ```{r env data}
 #| echo: false
 env.s <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/distance model/dist_data/wipt_male_df_timeanddist_18Oct23.csv")
-env.s <- env.s[,-c(1)]
 ```
 
 ## Format distance for unmarkedFrameGDR
@@ -151,7 +150,7 @@ covs_df <- full_join(df1, env.s, by = 'id')
 
 covs_df$area <- pi*400*400/10000
 
-
+ncol(covs_df)
 # site covariates: id, tundra, tussock, tallshrub, elevation, area
 siCovs <- covs_df[,c(17, 33:35, 38, 52)]
 siCovs$id <- as.factor(siCovs$id)
