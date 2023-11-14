@@ -46,7 +46,7 @@ env.s will be used to:
 ```{r env data}
 #| echo: false
 env.s <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/distance model/dist_data/wipt_male_df_timeanddist_18Oct23.csv")
-
+env.s <- env.s[,-c(1)]
 ```
 
 ## Format distance for unmarkedFrameGDR
