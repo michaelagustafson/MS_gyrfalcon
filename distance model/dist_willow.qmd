@@ -336,6 +336,20 @@ cellStats(zip.prediction, "min") # minimum density of 32 males/km2
 cellStats(zip.prediction, "max") # maximum density of 1 134 393 males/km2
 ```
 
+### Time Poisson Prediction
+```{r}
+time.prediction <- predict(time.model, type = "state", newdata = pred.surface) 
+
+plot(time.prediction) 
+
+#look at some stats
+cellStats(time.prediction, "sum") # 223 802
+cellStats(time.prediction, "min") # minimum density of 0.106 males/km2
+cellStats(time.prediction, "max") # maximum density of 6 582 males/km2
+```
+
+
+
 ## Partial Prediction Plots: Poisson
 
 ```{r ppp}
