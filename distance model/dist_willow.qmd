@@ -215,6 +215,29 @@ confint(um1.zip, type = "lambda")
 confint(um1.zip, type = "rem")
 ```
 
+##Time Removal Model: Poisson
+
+```{r}
+tSiCovs <- data.frame(siCovs, oCovs)
+
+timeFrame2 <- unmarkedFrameMPois(
+  # import time removal columns(counts):
+  y = yRem, 
+  siteCovs = data.frame(tSiCovs), 
+  # define pifun type: 
+  type = "removal" )
+# fit models: multinomPois order of formulas: detection, abundance
+
+time.model <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + tussock + tallshrub + elev + offset(log(area)), data = timeFrame2)
+
+summary(time.model)
+confint(time.model, type = "state")
+confint(time.model, type = "det")
+
+```
+
+
+
 ## Spatial Predictions
 
 Upload then standardize 1km resolution vegetation rasters.
