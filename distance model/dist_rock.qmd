@@ -288,6 +288,8 @@ plot(p.prediction)
 cellStats(p.prediction, "sum") # 642 036
 cellStats(p.prediction, "min") # minimum density of 4.9 males/km2
 cellStats(p.prediction, "max") # maximum density of 2 917 males/km2
+
+writeRaster(p.prediction, filename = names(p.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
 ```
 
 ### ZIP Prediction
@@ -302,4 +304,340 @@ plot(zip.prediction)
 cellStats(zip.prediction, "sum") # 3 038 518 mil
 cellStats(zip.prediction, "min") # minimum density of 22.9 males/km2
 cellStats(zip.prediction, "max") # maximum density of 27 178 males/km2
+
+writeRaster(zip.prediction, filename = names(zip.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
+```
+
+## Partial Prediction Plots: Poisson
+
+```{r}
+#| echo: false
+# Estimate partial prediction plots for predictors with 95% CIs not overlapping zero:
+
+# Start by creating our datasets to predict over
+
+# how many values do we use:
+n <- 100
+
+# Use the observed values to define our range:
+
+# import unscaled predictors
+env <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_env_join_18Oct23.csv")
+
+elevation.pp <- seq( min( env[,"elev"]),max(500),
+                   length.out = n )
+
+lowshrub.pp <- seq( min( env[,"lowshrub"]),max( env[,"lowshrub"]),
+                   length.out = n )
+
+tundra.pp <- seq( min( env[,"tundra"]),max( env[,"tundra"]),
+                   length.out = n )
+
+sparse.pp <- seq( min( env[,"sparseveg"]),max( env[,"sparseveg"]),
+                   length.out = n )
+
+#standardize predictors:
+elev.std <- scale( elevation.pp )
+lowshrub.std <- scale( lowshrub.pp )
+tundra.std <- scale( tundra.pp )
+sparse.std <- scale( sparse.pp )
+area.x = (pi*400*400)/10000
+```
+
+### Tundra
+
+```{r}
+#| echo: false
+
+### TUNDRA
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+tundData <- data.frame( tundra = tundra.std, sparseveg = 0, lowshrub = 0, elev = 0, area = area.x )
+
+#predict partial relationship:
+tun.p <- predict( um1.p, type = "lambda", newdata = tundData, 
+                          appendData = TRUE )
+
+### plot
+
+tund.p <- cbind( tun.p[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 45) +
+  theme_classic( base_size = 30) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  # add labels
+  labs( x = "Tundra", y = "Relative density (males/kmsq)" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue")
+tund.p
+
+ggsave("E:/gyrf_analysis/partial prediction plots 14Nov23/dist_rock_tundra.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+```
+
+### Sparse Vegetation
+
+```{r}
+#| echo: false
+
+vegData <- data.frame( tundra = 0, sparseveg = sparse.std, lowshrub = 0, elev = 0, area = area.x )
+
+#predict partial relationship:
+veg.p <- predict( um1.p, type = "lambda", newdata = vegData, 
+                          appendData = TRUE )
+
+
+### plot
+
+p.veg <- cbind( veg.p[,c("Predicted", "lower", "upper") ], sparse.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = sparse.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 30) +
+  # add labels
+  #ylim(0, 45) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  labs( x = "Sparse Vegetation", y = "Relative density (males/kmsq)" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+#view
+p.veg
+
+ggsave("E:/gyrf_analysis/partial prediction plots 14Nov23/dist_rock_sparse.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+```
+
+### Lowshrub
+
+```{r}
+#| echo: false
+lowData <- data.frame( tundra = 0, sparseveg = 0, lowshrub = lowshrub.std, elev = 0, area = area.x )
+
+#predict partial relationship:
+low.p <- predict( um1.p, type = "lambda", newdata = lowData, 
+                          appendData = TRUE )
+
+
+### plot
+
+p.low <- cbind( low.p[,c("Predicted", "lower", "upper") ], lowshrub.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = lowshrub.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 45) +
+  theme_classic( base_size = 30 ) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  # add labels
+  labs( x = "Low shrub", y = "Relative density (males/kmsq)" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size= 65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+#view
+p.low
+
+ggsave("E:/gyrf_analysis/partial prediction plots 14Nov23/dist_rock_lowshrub.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+```
+
+### Elevation
+
+```{r}
+#| echo: false
+elevData <- data.frame( tundra = 0, sparseveg = 0, lowshrub = 0, elev = elev.std, area = area.x )
+
+#predict partial relationship:
+pred.elev.p <- predict(um1.p, type = "lambda", newdata = elevData, 
+                          appendData = TRUE )
+
+
+### plot
+
+elev.p <- cbind( pred.elev.p[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 30) +
+  # add labels
+ # ylim(0, 13) +
+  labs( x = "Elevation (m)", y = "Relative density (male/kmsq)" ) +
+  theme(text=element_text(size=65)) +
+    # add band of confidence intervals
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+
+
+#view
+elev.p
+
+ggsave("E:/gyrf_analysis/partial prediction plots 14Nov23/dist_rock_elevation.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+```
+
+## Partial Prediction Plots: ZIP
+
+### Tundra
+
+```{r}
+#| echo: false
+
+### TUNDRA
+
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+tundData <- data.frame( tundra = tundra.std, sparseveg = 0, lowshrub = 0, elev = 0, area = area.x )
+
+#predict partial relationship:
+tun.zip <- predict( um1.zip, type = "lambda", newdata = tundData, 
+                          appendData = TRUE )
+
+### plot
+
+tund.zip <- cbind( tun.zip[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 45) +
+  theme_classic( base_size = 30) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  # add labels
+  labs( x = "Tundra", y = "Relative density (males/kmsq)" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue")
+tund.zip
+
+ggsave("E:/gyrf_analysis/partial prediction plots 14Nov23/dist_rock_tundra_zip.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+```
+
+### Sparse Vegetation
+
+```{r}
+#| echo: false
+
+vegData <- data.frame( tundra = 0, sparseveg = sparse.std, lowshrub = 0, elev = 0, area = area.x )
+
+#predict partial relationship:
+veg.zip <- predict( um1.zip, type = "lambda", newdata = vegData, 
+                          appendData = TRUE )
+
+
+### plot
+
+zip.veg <- cbind( veg.p[,c("Predicted", "lower", "upper") ], sparse.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = sparse.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 30) +
+  # add labels
+  #ylim(0, 45) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  labs( x = "Sparse Vegetation", y = "Relative density (males/kmsq)" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size=65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+#view
+zip.veg
+
+ggsave("E:/gyrf_analysis/partial prediction plots 14Nov23/dist_rock_sparse_zip.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+```
+
+### Lowshrub
+
+```{r}
+#| echo: false
+lowData <- data.frame( tundra = 0, sparseveg = 0, lowshrub = lowshrub.std, elev = 0, area = area.x )
+
+#predict partial relationship:
+low.zip <- predict( um1.zip, type = "lambda", newdata = lowData, 
+                          appendData = TRUE )
+
+
+### plot
+
+zip.low <- cbind( low.zip[,c("Predicted", "lower", "upper") ], lowshrub.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = lowshrub.pp, y = Predicted ) ) + 
+  #choose preset look
+  #ylim(0, 45) +
+  theme_classic( base_size = 30 ) +
+  # turn x axis into percent scale
+  scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
+  # add labels
+  labs( x = "Low shrub", y = "Relative density (males/kmsq)" ) +
+  # add band of confidence intervals
+  theme(text=element_text(size= 65)) +
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+#view
+zip.low
+
+ggsave("E:/gyrf_analysis/partial prediction plots 14Nov23/dist_rock_lowshrub_zip.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
+```
+
+### Elevation
+
+```{r}
+#| echo: false
+elevData <- data.frame( tundra = 0, sparseveg = 0, lowshrub = 0, elev = elev.std, area = area.x )
+
+#predict partial relationship:
+pred.elev.zip <- predict(um1.zip, type = "lambda", newdata = elevData, 
+                          appendData = TRUE )
+
+
+### plot
+
+elev.zip <- cbind( pred.elev.zip[,c("Predicted", "lower", "upper") ], elevation.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 30) +
+  # add labels
+ # ylim(0, 13) +
+  labs( x = "Elevation (m)", y = "Relative density (male/kmsq)" ) +
+  theme(text=element_text(size=65)) +
+    # add band of confidence intervals
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkblue" )
+
+
+#view
+elev.zip
+
+ggsave("E:/gyrf_analysis/partial prediction plots 14Nov23/dist_rock_elevation_zip.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
 ```
