@@ -182,6 +182,8 @@ env.s$id <- as.factor(env.s$id)
 covs_df <- full_join(df1, std.combined2, by = 'id')
 covs_df2 <- full_join(covs_df, final_scaled_df, by = 'id')
 
+write.csv(covs_df2, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/si_obs_covs_scaled_16nov23.csv")
+
 # add area to covs data
 # area of the survey area was a 400m radius circle
 # standardize the value by dividing by 10000
