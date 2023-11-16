@@ -169,6 +169,7 @@ umfGDR <- unmarkedFrameGDR(yDistance = yDist, yRemoval = yRem, numPrimary = 1, s
 
 ```
 
+
 ## Distance Removal Model: Poisson vs ZIP
 
 using function gdistremoval() in 'unmarked'
@@ -217,7 +218,7 @@ confint(um1.zip, type = "rem")
 ```{r}
 tSiCovs <- data.frame(siCovs, oCovs)
 
-timeFrame2 <- unmarkedFrameMPois(
+timeFrame <- unmarkedFrameMPois(
   # import time removal columns(counts):
   y = yRem, 
   siteCovs = data.frame(tSiCovs), 
