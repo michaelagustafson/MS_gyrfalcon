@@ -127,6 +127,8 @@ sum(yRem) # make sure its 485 and visually check that there are 988 rows/sites
 # import veg and elev
 
 final_scaled_df <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_standardized_df.csv")
+final_scaled_df <- final_scaled_df[,-c(1)]
+colnames(final_scaled_df)[1] <- "id"
 
 # now scale julian, min, and wind with 2 std
 
@@ -165,7 +167,7 @@ std.combined2 <- cbind(std.combined, env[,c(2, 18)])
 ```{r framebuild}
 # not sure if this makes a difference but put env covs in same order as yDist and yRem
 
-df1 <- data.frame(yDist)
+df1 <- data.frame(yRem)
 # Extract the row names of the matrix
 row_names <- rownames(df1)
 
@@ -177,21 +179,22 @@ df1$id <- as.factor(df1$id)
 env.s$id <- as.factor(env.s$id)
 
 # join scaled environmental to dataframe that is in same order as dist and time matrices
-covs_df <- full_join(df1, env.s, by = 'id')
+covs_df <- full_join(df1, std.combined2, by = 'id')
+covs_df2 <- full_join(covs_df, final_scaled_df, by = 'id')
 
 # add area to covs data
 # area of the survey area was a 400m radius circle
 # standardize the value by dividing by 10000
 
-covs_df$area <- pi*400*400/10000
+covs_df2$area <- pi*400*400/10000
 
-ncol(covs_df)
+
 # site covariates: id, tundra, tussock, tallshrub, elevation, area
-siCovs <- covs_df[,c(17, 33:35, 38, 52)]
+siCovs <- covs_df2[,c(6, 16, 18, 19, 26, 27)]
 siCovs$id <- as.factor(siCovs$id)
 
 # in the frame these are actually the yearlySiteCovs: id, julian, min after sunrise, observer, wind speed
-oCovs <- covs_df[,c(17, 39, 45, 49:50)]
+oCovs <- covs_df2[,c(6:10)]
 oCovs$id <- as.factor(oCovs$id)
 oCovs$observer <- as.factor(oCovs$observer)
 
