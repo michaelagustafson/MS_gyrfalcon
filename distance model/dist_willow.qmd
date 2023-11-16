@@ -122,11 +122,47 @@ yRem <- formatDistData(obs, distCol = "time_int", transectNameCol = "id", dist.b
 
 sum(yRem) # make sure its 485 and visually check that there are 988 rows/sites
 ```
+## Newly scaled values
+```{r}
+# import veg and elev
+
+final_scaled_df <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_standardized_df.csv")
+
+# now scale julian, min, and wind with 2 std
+
+obsCovs.scaled <- as.matrix(env[,c(24, 28, 29)])
+
+wind.std <- as.matrix(env[,c(24)])
+jul.std <- as.matrix(env[,c(28)])
+min.std <- as.matrix(env[,c(29)])
+
+# function to standardize:
+
+#genetic function to standardise covariates using Gelman's suggestion:
+standardise <- function( xmat, stdevs = 2, marg = c( 1, 2) ) { 
+  mean.xmat = mean( as.vector( xmat ), na.rm = TRUE )
+  sd.xmat = sd( as.vector( xmat ), na.rm = TRUE ) 
+  std.xmat = apply( xmat, marg, function( x ){
+    ( x - mean.xmat ) / (stdevs * sd.xmat ) } )
+  return( std.xmat )
+}
+
+
+wind.std2 <- standardise(wind.std)
+jul.std2 <- standardise(jul.std)
+min.std2 <- standardise(min.std)
+
+std.combined <- cbind(wind.std2, jul.std2, min.std2)
+std.combined <- data.frame(std.combined)
+
+colnames(std.combined) <- c("wind", "julian", "min_after_sun")
+
+std.combined2 <- cbind(std.combined, env[,c(2, 18)])
+```
 
 ## Build unmarkedFrameGDR
 
 ```{r framebuild}
-
 # not sure if this makes a difference but put env covs in same order as yDist and yRem
 
 df1 <- data.frame(yDist)
