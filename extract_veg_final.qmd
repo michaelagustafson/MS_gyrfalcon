@@ -51,6 +51,7 @@ Note: Have previously put all other rasters into the same CRS as the elevation/D
 
 all.mos <- raster("E:/gyrf_analysis/gyrf3/jenny/all.mos.dem.tif")
 res(all.mos)
+plot(all.mos)
 
 ```
 
@@ -74,8 +75,8 @@ pts[38,1] <- "COUN_3_12_4"
 study.area <- readOGR("E:/gyrf_analysis/gyrf3/shapefiles", "gyrf_studyarea")
 crs(study.area)
 crs(ak_dem)
-study.area.dem <- spTransform(study.area, crs(ak_dem))
-
+#study.area.dem <- spTransform(study.area, crs(ak_dem))
+study.area.dem <- spTransform(study.area, crs(dem.800))
 
 ```
 
@@ -126,4 +127,61 @@ writeRaster(dem.800, "E:/gyrf_analysis/MSgyrfalcon/dem_800.tif", overwrite = TRU
 # Here I saved and closed the script and project and restarted then just loaded the dem_800.tif to clear out some memory
 
 dem.800 <- raster(here("E:/gyrf_analysis/MSgyrfalcon/dem_800.tif"))
+```
+
+## Crop land cover to study area 
+
+```{r land mask}
+res(all.mos)
+
+mos.crop <- crop(all.mos, extent(dem.800))
+
+extent(mos.crop) <- extent(dem.800)
+
+
+mos.mask <- raster::mask(mos.crop, dem.800)
+plot(mos.mask)
+res(mos.mask)
+```
+
+## Resample to final elevation raster
+
+This will make the vegetation mosaic have the same resolution as the elevation model and will calculate the percentage of each vegetation type within the newly resampled pixel
+
+```{r}
+
+
+res(mos.crop)
+
+
+cov_pct <- lapply(unique(mos.crop), function(land_class) {
+             aggregate(mos.crop, fact=35, fun=function(vals, na.rm) {
+               sum(vals==land_class, na.rm=na.rm)/length(vals)
+             })
+           })
+
+cov_pct_stack <- stack(cov_pct)
+
+current_names <- names(cov_pct_stack)
+
+# Define new names for each layer
+new_names <- c("egforest", "decforest", "mixforest", "woodland", "lowshrub", "tallshrub", "openshrub", "tundra", "tussock", "sparseveg", "fen", "bog", "littoral", "barren", "water")  # Add as many names as there are layers
+
+# Assign the new names to the raster stack
+names(cov_pct_stack) <- new_names
+
+# Check the updated names
+print(names(cov_pct_stack))
+
+
+plot(cov_pct_stack)
+crs(cov_pct_stack)
+res(cov_pct_stack)
+
+#mask with dem.1k
+cov_pct_stack <- resample(cov_pct_stack, dem.800, method = 'ngb')
+
+
+# Save the stack to a new raster file
+writeRaster(cov_pct_stack, filename=names(cov_pct_stack), bylayer=TRUE, format="GTiff", overwrite = TRUE)
 ```
