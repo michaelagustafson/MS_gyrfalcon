@@ -233,4 +233,6 @@ colnames(pts)[3] <- "longitude"; colnames(pts)[4] <- "latitude"
 extracted_values <- extract(raster_stack_standardized, pts[,c(3, 4)])
                             
 extracted_values2 <- data.frame(site_id = pts$id, extracted_values)
+
+write.csv(extracted_values2, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_standardized_veg_extraction.csv)
 ```
