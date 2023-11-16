@@ -1,0 +1,129 @@
+---
+title: "habitat prep"
+format: docx
+editor: visual
+---
+
+# Extract Landscape Variables
+
+```{r}
+#| echo: false
+# Clean your workspace to reset your R environment
+rm( list = ls() )
+# Check that you are in the right project folder
+getwd()
+```
+
+## Library
+
+```{r}
+library(terra)
+library(sf)
+library(sp)
+library(rgdal)
+library(ggplot2)
+library(tidyverse)
+library(raster)
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(rgeos)
+library(here)
+library(reshape2)
+```
+
+## Import Data
+
+### Elevation
+
+Import DEM raster
+
+```{r dem}
+ak_dem <- raster::raster("E:/gyrf_analysis/gyrf3/data/dsm_mosaic_AK.tif")
+```
+
+Note: Have previously put all other rasters into the same CRS as the elevation/DEM raster
+
+### Vegetation
+
+```{r veg}
+### JENNY'S CODE:
+
+all.mos <- raster("E:/gyrf_analysis/gyrf3/jenny/all.mos.dem.tif")
+res(all.mos)
+
+```
+
+### Survey Locations
+
+```{r survey loc}
+
+# these points were previously put in same CRS as dem
+pts <- as.data.frame(readOGR("E:/gyrf_analysis/gyrf3/shapefiles","pts_3years_2"))
+
+# fix that one council id
+
+pts[38,1] <- "COUN_3_12_4"
+
+
+```
+
+### Study Area
+
+```{r}
+study.area <- readOGR("E:/gyrf_analysis/gyrf3/shapefiles", "gyrf_studyarea")
+crs(study.area)
+crs(ak_dem)
+study.area.dem <- spTransform(study.area, crs(ak_dem))
+
+
+```
+
+Step 1:
+
+a\. Crop and mask **elevation raster** with study area.
+
+```{r crop}
+# Step A: Crop and mask elevation raster with study area
+ak_dem.crop <- raster::crop(ak_dem, study.area.dem)
+ak_dem.crop.mask <- raster::mask(ak_dem.crop, study.area.dem)
+
+res(ak_dem.crop.mask)
+
+plot(ak_dem.crop.mask)
+
+```
+
+b\. Aggregate **elevation raster** from 5m res to 800m res
+
+```{r}
+# Step B: Aggregate cropped elevation raster from 5m res to 800m res
+
+# have to include na.rm = true or else elevations >500m come back into the picture!
+
+dem.800 <- aggregate(ak_dem.crop.mask, fact = 160, fun = mean, na.rm = TRUE)
+
+plot(dem.800)
+
+
+
+```
+
+c\. Remove pixels that result in a mean elevation \>500m
+
+```{r}
+# Step C: remove pixels that result in mean elevation >500m
+# dem.400[dem.400>=500] <- NA
+
+dem.800[dem.800 > 500] <- NA
+
+plot(dem.800)
+
+
+# save for easier code running later
+writeRaster(dem.800, "E:/gyrf_analysis/MSgyrfalcon/dem_800.tif", overwrite = TRUE)
+
+# Here I saved and closed the script and project and restarted then just loaded the dem_800.tif to clear out some memory
+
+dem.800 <- raster(here("E:/gyrf_analysis/MSgyrfalcon/dem_800.tif"))
+```
