@@ -225,7 +225,7 @@ writeRaster(raster_stack_standardized, filename=names(raster_stack_standardized)
 
 Cool, I think that worked.
 
-Now pull the values for each survey point
+Now pull the veg values for each survey point
 
 ```{r}
 colnames(pts)[3] <- "longitude"; colnames(pts)[4] <- "latitude"
@@ -235,5 +235,21 @@ extracted_values <- extract(raster_stack_standardized, pts[,c(3, 4)])
 extracted_values2 <- data.frame(site_id = pts$id, extracted_values)
 
 
-write.csv(extracted_values2, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_standardized_veg_extraction.csv")
+
+```
+
+Now for elevation:
+
+```{r}
+
+# Apply the standardise function to each cell of the raster
+elev_standardized <- raster::calc(dem.800, standardise)
+
+extracted_elev <- extract(elev_standardized, pts[,c(3, 4)])
+extracted_elev2 <- data.frame(site_id = pts$id, extracted_elev)
+
+final_standardized_df <- cbind(extracted_values2, extracted_elev2)
+final_standardized_df <- final_standardized_df[,-c(17)]
+
+write.csv(final_standardized_df, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_standardized_df.csv")
 ```
