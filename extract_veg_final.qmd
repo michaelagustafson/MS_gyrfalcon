@@ -129,7 +129,7 @@ writeRaster(dem.800, "E:/gyrf_analysis/MSgyrfalcon/dem_800.tif", overwrite = TRU
 dem.800 <- raster(here("E:/gyrf_analysis/MSgyrfalcon/dem_800.tif"))
 ```
 
-## Crop land cover to study area 
+## Crop land cover to study area
 
 ```{r land mask}
 res(all.mos)
@@ -252,4 +252,20 @@ final_standardized_df <- cbind(extracted_values2, extracted_elev2)
 final_standardized_df <- final_standardized_df[,-c(17)]
 
 write.csv(final_standardized_df, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_standardized_df.csv")
+```
+
+Do the same as above but the unstandardized version for partial prediction plots (which need the raw values to simulate the range of values)
+
+```{r}
+# veg  
+raw_values <- extract(cov_pct_stack, pts[,c(3, 4)]) 
+raw_values2 <- data.frame(site_id = pts$id, raw_values)  
+# elevation  
+raw_elev <- extract(dem.800, pts[,c(3, 4)]) 
+raw_elev2 <- data.frame(site_id = pts$id, raw_elev)
+
+
+raw_hab_vals <- cbind(raw_values2, raw_elev2)
+
+write.csv(raw_hab_vals, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/raw_hab_vals.csv")
 ```
