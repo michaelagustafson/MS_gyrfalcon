@@ -245,6 +245,8 @@ Now for elevation:
 # Apply the standardise function to each cell of the raster
 elev_standardized <- raster::calc(dem.800, standardise)
 
+writeRaster(elev_standardized, filename=names(elev_standardized), bylayer=TRUE, format="GTiff", overwrite = TRUE)
+
 extracted_elev <- extract(elev_standardized, pts[,c(3, 4)])
 extracted_elev2 <- data.frame(site_id = pts$id, extracted_elev)
 
