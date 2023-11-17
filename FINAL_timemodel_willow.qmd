@@ -94,8 +94,9 @@ plot(time.prediction)
 
 #look at some stats
 cellStats(time.prediction, "sum") # 55 431 total abundance
-cellStats(time.prediction, "min") # minimum density of 0.26 males/km2
-cellStats(time.prediction, "max") # maximum density of 5.08 males/km2
+cellStats(time.prediction, "min") # minimum density of 0.26 males/800m2
+cellStats(time.prediction, "max") # maximum density of 5.08 males/800m2
+cellStats(time.prediction, "mean") # 2.13 males/800m2
 
 writeRaster(time.prediction, filename = names(time.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
 ```
@@ -173,7 +174,7 @@ tund.t <- cbind( tun.t[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "Tundra", y = "Relative density (males/kmsq)" ) +
+  labs( x = "Tundra", y = "Relative density (males/800 m2)" ) +
   # add band of confidence intervals
   theme(text=element_text(size=65)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
@@ -209,7 +210,7 @@ t.tuss <- cbind( tuss.t[,c("Predicted", "lower", "upper") ], tussock.pp ) %>%
   ylim(0, 6) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
-  labs( x = "Tussock", y = "Relative density (males/kmsq)" ) +
+  labs( x = "Tussock", y = "Relative density (males/800 m2)" ) +
   # add band of confidence intervals
   theme(text=element_text(size=65)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
@@ -245,7 +246,7 @@ t.tall <- cbind( tall.t[,c("Predicted", "lower", "upper") ], tallshrub.pp ) %>%
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "Tall shrub", y = "Relative density (males/kmsq)" ) +
+  labs( x = "Tall shrub", y = "Relative density (males/800 m2)" ) +
   # add band of confidence intervals
   theme(text=element_text(size= 65)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
@@ -278,7 +279,7 @@ elev.t <- cbind( pred.elev.t[,c("Predicted", "lower", "upper") ], elevation.pp )
   theme_classic( base_size = 30) +
   # add labels
   ylim(0, 6) +
-  labs( x = "Elevation (m)", y = "Relative density (male/kmsq)" ) +
+  labs( x = "Elevation (m)", y = "Relative density (male/800 m2)" ) +
   theme(text=element_text(size=65)) +
     # add band of confidence intervals
   geom_smooth( aes(ymin = lower, ymax = upper ), 
