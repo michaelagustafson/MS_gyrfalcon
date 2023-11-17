@@ -221,7 +221,7 @@ tund.t <- cbind( tun.t[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   # define x and y values
   ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
   #choose preset look
-  #ylim(0, 45) +
+  ylim(0, 1) +
   theme_classic( base_size = 30) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
@@ -254,7 +254,7 @@ lowshrub.t <- cbind( low.t[,c("Predicted", "lower", "upper") ], lowshrub.pp ) %>
   # define x and y values
   ggplot(., aes( x = lowshrub.pp, y = Predicted ) ) + 
   #choose preset look
-  #ylim(0, 45) +
+  ylim(0, 1) +
   theme_classic( base_size = 30) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
@@ -287,7 +287,7 @@ sparse.t <- cbind( sv.t[,c("Predicted", "lower", "upper") ], sparseveg.pp ) %>%
   # define x and y values
   ggplot(., aes( x = sparseveg.pp, y = Predicted ) ) + 
   #choose preset look
-  #ylim(0, 45) +
+  ylim(0, 1) +
   theme_classic( base_size = 30) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
@@ -320,7 +320,7 @@ elevation.t <- cbind( elev.t[,c("Predicted", "lower", "upper") ], elevation.pp )
   # define x and y values
   ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
   #choose preset look
-  #ylim(0, 45) +
+  ylim(0, 1) +
   theme_classic( base_size = 30) +
   # add labels
   labs( x = "Elevation (m) ", y = "Relative density (squirrels/kmsq)" ) +
