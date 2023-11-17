@@ -54,7 +54,7 @@ confint(time.model, type = "det")
 # Import already scaled (by 2 std dev) rasters
 
 
-elev <- raster("E:/gyrf_analysis/MSgyrfalcon/dem_800.tif")
+elev <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/elev_std.tif")
 
 tallshrub <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/percent cover standardized/tallshrub.tif")
 
@@ -93,9 +93,9 @@ time.prediction <- predict(time.model, type = "state", newdata = pred.surface)
 plot(time.prediction) 
 
 #look at some stats
-cellStats(time.prediction, "sum") # 18954 total abundance
-cellStats(time.prediction, "min") # minimum density of 0.003 males/km2
-cellStats(time.prediction, "max") # maximum density of 3.45 males/km2
+cellStats(time.prediction, "sum") # 55 431 total abundance
+cellStats(time.prediction, "min") # minimum density of 0.26 males/km2
+cellStats(time.prediction, "max") # maximum density of 5.08 males/km2
 
 writeRaster(time.prediction, filename = names(time.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
 ```
