@@ -151,8 +151,9 @@ plot(time.prediction)
 
 #look at some stats
 cellStats(time.prediction, "sum") # 4 041 total abundance
-cellStats(time.prediction, "min") # minimum density of 0.003 males/km2
-cellStats(time.prediction, "max") # maximum density of 2.94 males/km2
+cellStats(time.prediction, "min") # minimum density of 0.003 males/800m2
+cellStats(time.prediction, "max") # maximum density of 2.94 males/800m2
+cellStats(time.prediction, "mean") # 0.15 males/800m2
 
 writeRaster(time.prediction, filename = names(time.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
 ```
