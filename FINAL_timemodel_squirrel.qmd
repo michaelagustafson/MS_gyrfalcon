@@ -231,9 +231,9 @@ tund.t <- cbind( tun.t[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   theme(text=element_text(size=65)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+               size = 5, alpha = 0.5, fill = "darksalmon" ) +
   # add mean line on top
-  geom_line( size = 5, color = "darkblue")
+  geom_line( size = 5, color = "darkred")
 tund.t
 
 ggsave("E:/gyrf_analysis/FINAL time pprediction plots 17Nov23/squir_tundra.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
@@ -264,9 +264,9 @@ lowshrub.t <- cbind( low.t[,c("Predicted", "lower", "upper") ], lowshrub.pp ) %>
   theme(text=element_text(size=65)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+               size = 5, alpha = 0.5, fill = "darksalmon" ) +
   # add mean line on top
-  geom_line( size = 5, color = "darkblue")
+  geom_line( size = 5, color = "darkred")
 lowshrub.t
 
 ggsave("E:/gyrf_analysis/FINAL time pprediction plots 17Nov23/squir_lowshrub.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
@@ -297,9 +297,9 @@ sparse.t <- cbind( sv.t[,c("Predicted", "lower", "upper") ], sparseveg.pp ) %>%
   theme(text=element_text(size=65)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+               size = 5, alpha = 0.5, fill = "darksalmon" ) +
   # add mean line on top
-  geom_line( size = 5, color = "darkblue")
+  geom_line( size = 5, color = "darkred")
 sparse.t
 
 ggsave("E:/gyrf_analysis/FINAL time pprediction plots 17Nov23/squir_sparseveg.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
@@ -328,9 +328,9 @@ elevation.t <- cbind( elev.t[,c("Predicted", "lower", "upper") ], elevation.pp )
   theme(text=element_text(size=65)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 5, alpha = 0.5, fill = "lightblue3" ) +
+               size = 5, alpha = 0.5, fill = "darksalmon" ) +
   # add mean line on top
-  geom_line( size = 5, color = "darkblue")
+  geom_line( size = 5, color = "darkred")
 elevation.t
 
 ggsave("E:/gyrf_analysis/FINAL time pprediction plots 17Nov23/squir_elevation.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
