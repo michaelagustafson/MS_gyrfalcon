@@ -228,7 +228,7 @@ tund.t <- cbind( tun.t[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "Tundra", y = "Relative density (males/kmsq)" ) +
+  labs( x = "Tundra", y = "Relative density (males/800m2)" ) +
   # add band of confidence intervals
   theme(text=element_text(size=65)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
@@ -261,7 +261,7 @@ lowshrub.t <- cbind( low.t[,c("Predicted", "lower", "upper") ], lowshrub.pp ) %>
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "Low shrub", y = "Relative density (males/kmsq)" ) +
+  labs( x = "Low shrub", y = "Relative density (males/800m2)" ) +
   # add band of confidence intervals
   theme(text=element_text(size=65)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
@@ -294,7 +294,7 @@ sparse.t <- cbind( sv.t[,c("Predicted", "lower", "upper") ], sparseveg.pp ) %>%
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "Sparse vegetation", y = "Relative density (males/kmsq)" ) +
+  labs( x = "Sparse vegetation", y = "Relative density (males/800m2)" ) +
   # add band of confidence intervals
   theme(text=element_text(size=65)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
@@ -325,7 +325,7 @@ elevation.t <- cbind( elev.t[,c("Predicted", "lower", "upper") ], elevation.pp )
   ylim(0, 0.4) +
   theme_classic( base_size = 30) +
   # add labels
-  labs( x = "Elevation (m) ", y = "Relative density (males/kmsq)" ) +
+  labs( x = "Elevation (m) ", y = "Relative density (males/800m2)" ) +
   # add band of confidence intervals
   theme(text=element_text(size=65)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
