@@ -168,7 +168,7 @@ tund.t <- cbind( tun.t[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   # define x and y values
   ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
   #choose preset look
-  #ylim(0, 45) +
+  ylim(0, 6) +
   theme_classic( base_size = 30) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
@@ -206,7 +206,7 @@ t.tuss <- cbind( tuss.t[,c("Predicted", "lower", "upper") ], tussock.pp ) %>%
   #choose preset look
   theme_classic( base_size = 30) +
   # add labels
-  #ylim(0, 45) +
+  ylim(0, 6) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   labs( x = "Tussock", y = "Relative density (males/kmsq)" ) +
@@ -240,7 +240,7 @@ t.tall <- cbind( tall.t[,c("Predicted", "lower", "upper") ], tallshrub.pp ) %>%
   # define x and y values
   ggplot(., aes( x = tallshrub.pp, y = Predicted ) ) + 
   #choose preset look
-  #ylim(0, 45) +
+  ylim(0, 6) +
   theme_classic( base_size = 30 ) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
@@ -277,7 +277,7 @@ elev.t <- cbind( pred.elev.t[,c("Predicted", "lower", "upper") ], elevation.pp )
   #choose preset look
   theme_classic( base_size = 30) +
   # add labels
- # ylim(0, 13) +
+  ylim(0, 6) +
   labs( x = "Elevation (m)", y = "Relative density (male/kmsq)" ) +
   theme(text=element_text(size=65)) +
     # add band of confidence intervals
