@@ -1,0 +1,158 @@
+---
+title: "FINAL_timemodel_rock"
+format: docx
+editor: visual
+---
+
+```{r}
+# Clean your workspace to reset your R environment
+rm( list = ls() )
+# Check that you are in the right project folder
+getwd()
+```
+
+## Library
+
+```{r}
+library(unmarked)
+library(raster)
+library(dplyr)
+library(ggplot2)
+library(here)
+```
+
+## Import data
+
+```{r}
+rocks <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/rockmalesonly_timedist_9nov23.csv")
+rocks <- rocks[,-c(1)]
+
+allCovs_std <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/si_obs_covs_scaled_16nov23.csv")
+allCovs_std2 <- allCovs_std[,c(7:28)]
+```
+
+```{r}
+obs.ids <- as.data.frame(rocks$id)
+all.ids <- as.data.frame(allCovs_std2$id)
+
+missing_df <- as.data.frame(setdiff(all.ids$`allCovs_std2$id`, obs.ids$`rocks$id`))
+colnames(missing_df)[1] <- "id" # change the name of the first column to 'id'
+
+# now need to create dataframe that attaches empty sites to end of sites where ptarmigan were observed so i can then match those 'levels' of sites to the data frame of only observed. It make sure the formatting code knows there are sites where ptarmigan weren't observed. But the empty sites need to be attached to the end of the observed sites in an actual dataframe and then those levels matched to the observed dataframe as 'ghost' levels or else the order will be messed up and it will put the 'observed' ptarmigan into sites that were actually empty.
+
+# so say the observed dataframe is df.obs = 'a, b, a, c, c, d' and you also had a site 'e' that was empty that you want to add to the levels. so a dataframe with all sites/levels, df.allsites = 'a, b, c, d, e'
+
+# if you were to try and match the levels like 'levels(df.obs$id) <- levels(df.allsites$id) it would change the order of the observed sites to 'a, b, c, d, e' so then e would be matched up with a row that has an observation. you need to create a df that matches the same pattern of repeated site observations then add all the missing ones at the end: df.match = 'a, b, a, c, c, d, e' so then when you match them up the first sequence of 'a, b, a, c, c, d' matches up, then e is put at the end with empty values
+
+
+# create my empty data frame I'm going to attach
+
+num_columns <- 4 # define number of columns
+num_rows <- 945 #define number of rows(the number of empty sites I'm adding)
+col_names <- colnames(rocks) # define what column names will be (the same as the frame i'm binding too)
+
+# create the dataframe wtih my specifications
+my_df <- data.frame(matrix(0, nrow = num_rows, ncol = num_columns))
+
+# and add column names
+colnames(my_df) <- col_names
+
+# and replace 'id' column with names of all empty sites
+my_df$id <- missing_df$id
+
+# need to 'add' missing factor levels to the dataframe I'll actually be putting into the formatting code (creates 'ghost' sites for all empty sites)
+
+
+rocks$id <- as.factor(rocks$id)
+my_df$id <- as.factor(my_df$id)
+
+rocks$id <- factor(rocks$id, levels = union(levels(rocks$id), levels(my_df$id)))
+levels(rocks$id) # should be 988
+
+rocks2 <- rocks[,c(1:2)]
+```
+
+```{r}
+yRem <- formatDistData(rocks2, distCol = "time_int", transectNameCol = "id", dist.breaks = c(0, 2, 4, 6, 8, 10))
+
+sum(yRem) # make sure its 55 and visually check that there are 988 rows/sites
+
+yRem_df <- as_tibble(yRem, rownames = "id")
+```
+
+```{r}
+covs_join <- full_join(yRem_df, allCovs_std2)
+
+colnames(covs_join)[26] <- "elev"
+```
+
+```{r}
+
+timeFrame <- unmarkedFrameMPois(
+  # import time removal columns(counts):
+  y = covs_join[,c(2:6)], 
+  siteCovs = data.frame(covs_join), 
+  # define pifun type: 
+  type = "removal" )
+# fit models: multinomPois order of formulas: detection, abundance
+
+time.model <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + lowshrub + sparseveg + elev + offset(log(area)), data = timeFrame)
+
+
+summary(time.model)
+confint(time.model, type = "state")
+confint(time.model, type = "det")
+colnames(allCovs_std)[27] <- "elev"
+```
+
+## Prediction Maps
+
+```{r}
+# Import already scaled (by 2 std dev) rasters
+
+
+elev <- raster("E:/gyrf_analysis/MSgyrfalcon/dem_800.tif")
+
+tallshrub <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/percent cover standardized/tallshrub.tif")
+
+tundra <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/percent cover standardized/tundra.tif")
+
+tussock <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/percent cover standardized/tussock.tif")
+
+
+area.raster <- elev 
+values(area.raster) <- 800*800/10000 # area of a grid pixel, divided by 10000 to standardize
+
+# pull scaled (by 2 std dev) observation/yearlySite covs from dataframe
+
+jul.raster <- elev # create a raster using one thats already in correct crs/scale
+values(jul.raster) <- mean(allCovs_std$julian) # replace data with that of what you want - doing it with the mean scaled value of obs covs
+
+wind.raster <- elev 
+values(wind.raster) <- mean(allCovs_std$wind)
+
+minsun.raster <- elev 
+values(minsun.raster) <- mean(allCovs_std$min_after_sun)
+
+obs.raster <- elev 
+values(obs.raster) <- as.factor("DS") # "DS" is the intercept
+
+
+
+pred.surface <- stack(tundra, tussock, tallshrub, elev, area.raster, jul.raster, wind.raster, minsun.raster, obs.raster)
+
+names(pred.surface) <- c("tundra", "tussock", "tallshrub", "elev", "area", "julian", "wind", "min_after_sun", "observer")
+```
+
+```{r}
+time.prediction <- predict(time.model, type = "state", newdata = pred.surface) 
+
+plot(time.prediction) 
+
+#look at some stats
+cellStats(time.prediction, "sum") # 18954 total abundance
+cellStats(time.prediction, "min") # minimum density of 0.003 males/km2
+cellStats(time.prediction, "max") # maximum density of 3.45 males/km2
+
+writeRaster(time.prediction, filename = names(time.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
+```
