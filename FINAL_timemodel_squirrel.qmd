@@ -150,8 +150,9 @@ plot(time.prediction)
 
 #look at some stats
 cellStats(time.prediction, "sum") # 9 512 total abundance
-cellStats(time.prediction, "min") # minimum density of 0.07 squirrels/km2
-cellStats(time.prediction, "max") # maximum density of 6.65 squirrels/km2
+cellStats(time.prediction, "min") # minimum density of 0.07 squirrels/800m2
+cellStats(time.prediction, "max") # maximum density of 6.65 squirrels/800m2
+cellStats(time.prediction, "mean") # 0.36 squirrels/800m2
 
 writeRaster(time.prediction, filename = names(time.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
 ```
