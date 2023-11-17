@@ -182,7 +182,7 @@ env.s$id <- as.factor(env.s$id)
 covs_df <- full_join(df1, std.combined2, by = 'id')
 covs_df2 <- full_join(covs_df, final_scaled_df, by = 'id')
 
-write.csv(covs_df2, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/si_obs_covs_scaled_16nov23.csv")
+#write.csv(covs_df2, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/si_obs_covs_scaled_16nov23.csv")
 
 # add area to covs data
 # area of the survey area was a 400m radius circle
@@ -200,7 +200,7 @@ oCovs <- covs_df2[,c(6:10)]
 oCovs$id <- as.factor(oCovs$id)
 oCovs$observer <- as.factor(oCovs$observer)
 
-breaks <- seq(0, 400, by = 25)
+#breaks <- seq(0, 400, by = 25)
 
 
 
@@ -259,6 +259,8 @@ confint(um1.zip, type = "rem")
 ```{r}
 tSiCovs <- data.frame(siCovs, oCovs)
 
+colnames(tSiCovs)[5] <- "elev"
+
 timeFrame <- unmarkedFrameMPois(
   # import time removal columns(counts):
   y = yRem, 
@@ -267,7 +269,8 @@ timeFrame <- unmarkedFrameMPois(
   type = "removal" )
 # fit models: multinomPois order of formulas: detection, abundance
 
-time.model <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + tussock + tallshrub + elev + offset(log(area)), data = timeFrame2)
+time.model <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + tussock + tallshrub + elev + offset(log(area)), data = timeFrame)
+
 
 summary(time.model)
 confint(time.model, type = "state")
@@ -277,68 +280,41 @@ confint(time.model, type = "det")
 
 ## Spatial Predictions
 
-Upload then standardize 1km resolution vegetation rasters.
+Upload then standardize 800 m resolution vegetation rasters.
 
 ```{r}
-# First need to scale study-wide rasters to match scaling of model:
+# Import already scaled (by 2 std dev) rasters
 
 
-elev <- raster("E:/gyrf_analysis/MSgyrfalcon/1k rasters/dem_1k.tif")
+elev <- raster("E:/gyrf_analysis/MSgyrfalcon/dem_800.tif")
 
-tallshrub <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/distance model/dist_data/tallshrub.tif")
+tallshrub <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/percent cover standardized/tallshrub.tif")
 
-tundra <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/distance model/dist_data/tundra.tif")
+tundra <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/percent cover standardized/tundra.tif")
 
-tussock <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/distance model/dist_data/tussock.tif")
-
-
-
-# standardize by each rasters mean and standard deviation
-
-# elev
-cellStats(elev, mean) #173.7808
-cellStats(elev, sd) #120.5669
-
-elev.s <- (elev-173.7808)/120.5669
-
-# tundra
-cellStats(tundra, mean) #0.1608737
-cellStats(tundra, sd) #0.08171017
-
-tundra.s <- (tundra-0.1608737)/0.08171017
-
-# tussock
-cellStats(tussock, mean) #0.1202638
-cellStats(tussock, sd) #0.08615176
-
-tussock.s <- (tussock-0.1202638)/0.08615176
-
-# tallshrub
-cellStats(tallshrub, mean)
-cellStats(tallshrub, sd)
-
-tallshrub.s <- (tallshrub - 0.1321896)/0.07754615
+tussock <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/percent cover standardized/tussock.tif")
 
 
 area.raster <- elev 
-values(area.raster) <- 1000*1000/10000 # area of a grid pixel, divided by 10000 to standardize
+values(area.raster) <- 800*800/10000 # area of a grid pixel, divided by 10000 to standardize
 
-# pull scaled observation/yearlySite covs from dataframe
+# pull scaled (by 2 std dev) observation/yearlySite covs from dataframe
+
 jul.raster <- elev # create a raster using one thats already in correct crs/scale
-values(jul.raster) <- mean(env.s$julian) # replace data with that of what you want - doing it with the mean scaled value of obs covs
+values(jul.raster) <- mean(jul.std2) # replace data with that of what you want - doing it with the mean scaled value of obs covs
 
 wind.raster <- elev 
-values(wind.raster) <- mean(env.s$wind)
+values(wind.raster) <- mean(wind.std2)
 
 minsun.raster <- elev 
-values(minsun.raster) <- mean(env.s$min_after_sun)
+values(minsun.raster) <- mean(min.std2)
 
 obs.raster <- elev 
 values(obs.raster) <- as.factor("DS") # "DS" is the intercept
 
 
 
-pred.surface <- stack(tundra.s, tussock.s, tallshrub.s, elev.s, area.raster, jul.raster, wind.raster, minsun.raster, obs.raster)
+pred.surface <- stack(tundra, tussock, tallshrub, elev, area.raster, jul.raster, wind.raster, minsun.raster, obs.raster)
 
 names(pred.surface) <- c("tundra", "tussock", "tallshrub", "elev", "area", "julian", "wind", "min_after_sun", "observer")
 
@@ -384,9 +360,9 @@ time.prediction <- predict(time.model, type = "state", newdata = pred.surface)
 plot(time.prediction) 
 
 #look at some stats
-cellStats(time.prediction, "sum") # 223 802
-cellStats(time.prediction, "min") # minimum density of 0.106 males/km2
-cellStats(time.prediction, "max") # maximum density of 6 582 males/km2
+cellStats(time.prediction, "sum") # 18924 total abundance
+cellStats(time.prediction, "min") # minimum density of 1.89 males/km2
+cellStats(time.prediction, "max") # maximum density of 3.45 males/km2
 
 writeRaster(time.prediction, filename = names(time.prediction), bylayer = TRUE, format = "GTiff", overwrite = TRUE)
 ```
@@ -405,25 +381,22 @@ n <- 100
 # Use the observed values to define our range:
 
 # import unscaled predictors
-env <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_env_join_18Oct23.csv")
+#env <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_env_join_18Oct23.csv")
 
-elevation.pp <- seq( min( env[,"elev"]),max(500),
+elevation.pp <- seq( min( tSiCovs[,"elev"]),max(500),
                    length.out = n )
 
-tallshrub.pp <- seq( min( env[,"tallshrub"]),max( env[,"tallshrub"]),
+tallshrub.pp <- seq( min( tSiCovs[,"tallshrub"]),max( tSiCovs[,"tallshrub"]),
                    length.out = n )
 
-tundra.pp <- seq( min( env[,"tundra"]),max( env[,"tundra"]),
+tundra.pp <- seq( min( tSiCovs[,"tundra"]),max( tSiCovs[,"tundra"]),
                    length.out = n )
 
-tussock.pp <- seq( min( env[,"tussock"]),max( env[,"tussock"]),
+tussock.pp <- seq( min( tSiCovs[,"tussock"]),max( tSiCovs[,"tussock"]),
                    length.out = n )
 
 #standardize predictors:
-elev.std <- scale( elevation.pp )
-tallshrub.std <- scale( tallshrub.pp )
-tundra.std <- scale( tundra.pp )
-tussock.std <- scale( tussock.pp )
+
 area.x = (pi*400*400)/10000
 ```
 
