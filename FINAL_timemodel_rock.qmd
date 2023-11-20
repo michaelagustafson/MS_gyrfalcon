@@ -338,3 +338,182 @@ elevation.t
 
 ggsave("E:/gyrf_analysis/FINAL time pprediction plots 17Nov23/ropt_elevation.png", width = 20, height = 15, dpi = 300, limitsize = FALSE)
 ```
+
+## Partial Prediction Plots: Detection
+
+```{r}
+raw_det <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/data/all_env_FINAL.csv")
+raw_det2 <- raw_det[,c(2:3, 5:6, 9)]
+
+# Start by creating our datasets to predict over
+
+# how many values do we use:
+n <- 100
+
+
+# Use the observed values to define our range:
+julian.pp <- seq( min( raw_det2[,"julian"]),max(raw_det2[,"julian"]),
+                   length.out = n )
+
+wind.pp <- seq( min( raw_det2[,"wind"]),max( raw_det2[,"wind"]),
+                   length.out = n )
+
+wind.km <- wind.pp*1.60934
+
+minsun.pp <- seq( min( raw_det2[,"min_after_sun"]),max( raw_det2[,"min_after_sun"]),
+                   length.out = n )
+
+
+#standardize predictors:
+jul.std <- standardise(as.matrix( julian.pp ))
+wind.std.km <- standardise(as.matrix(wind.km ))
+minsun.std <- standardise(as.matrix( minsun.pp ))
+area.x = pi*400*400/10000
+```
+
+### Observer
+
+```{r}
+# Observer effect
+#combine standardized predictors into a new dataframe to predict partial relationship
+# for abundance submodel:
+detDataobs <- data.frame( observer = factor( c("DS", "KW","MG"), levels = c("DS", "KW","MG") ),
+                       julian = 0, 
+                       wind = 0, 
+                       min_after_sun = 0)
+
+
+#predict partial relationship:
+pred.obs <- predict( time.model, type = "det", newdata = detDataobs, 
+                          appendData = TRUE )
+
+
+
+obsvp.det <- pred.obs %>%
+  # define x and y values
+  ggplot(., aes( x = observer, y = Predicted, color = observer ) ) + 
+  #choose preset look
+  theme_classic( base_size = 35 ) +
+  #remove legend
+  theme( legend.position = "none" ) +
+  # add labels
+  labs( x = "Observer", y = "Detection probability" ) +
+  theme(text=element_text(size=75)) +
+  #add mean detection for each observer
+  geom_point( size = 15 ) +
+  # add confidence intervals
+  geom_errorbar( aes(ymin = lower, ymax = upper ), 
+               size = 4, width = 0.3 ) +
+  scale_color_manual(values=c('darkgreen','darkgreen','darkgreen')) +
+  ylim(0,1)
+#view
+obsvp.det
+
+
+ggsave("E:/gyrf_analysis/detection partial plots 20nov23/rock_observer.png", width = 15, height = 15, dpi = 300)
+```
+
+### Julian
+
+```{r}
+detDatajul <- data.frame( observer = factor("DS", levels = c("DS", "KW","MG") ),
+                       julian = jul.std, 
+                       wind = 0, 
+                       min_after_sun = 0)
+
+
+#predict partial relationship:
+pred.jul <- predict( time.model, type = "det", newdata = detDatajul, 
+                          appendData = TRUE )
+
+julp.det <- cbind( pred.jul[,c("Predicted", "lower", "upper") ], julian.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = julian.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 35 ) +
+  # add labels
+  labs( x = "Day of the year", y = "Detection probability" ) +
+  theme(text=element_text(size=75)) +
+  # add band of confidence intervals
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "darkseagreen" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkgreen" ) +
+  ylim(0,1)
+#view
+julp.det
+
+
+
+ggsave("E:/gyrf_analysis/detection partial plots 20nov23/rock_julian.png", width = 15, height = 15, dpi = 300)
+```
+
+### Wind speed
+
+```{r}
+detDatawind <- data.frame( observer = factor("DS", levels = c("DS", "KW","MG") ),
+                       julian = 0, 
+                       wind = wind.std.km, 
+                       min_after_sun = 0)
+
+
+#predict partial relationship:
+pred.wind <- predict( time.model, type = "det", newdata = detDatawind, 
+                          appendData = TRUE )
+
+windp.det <- cbind( pred.wind[,c("Predicted", "lower", "upper") ], wind.km ) %>%
+  # define x and y values
+  ggplot(., aes( x = wind.km, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 35 ) +
+  # add labels
+  labs( x = "Wind speed (kmph)", y = "Detection probability" ) +
+  theme(text=element_text(size=75)) +
+  # add band of confidence intervals
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "darkseagreen" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkgreen" ) +
+  ylim(0,1)
+#view
+windp.det
+
+ggsave("E:/gyrf_analysis/detection partial plots 20nov23/rock_wind.png", width = 15, height = 15, dpi = 300)
+```
+
+### Minutes after sunrise
+
+```{r}
+detDatasun <- data.frame( observer = factor("DS", levels = c("DS", "KW","MG") ),
+                       julian = 0, 
+                       wind = 0, 
+                       min_after_sun = minsun.std)
+
+
+#predict partial relationship:
+pred.sun <- predict(time.model, type = "det", newdata = detDatasun, 
+                          appendData = TRUE )
+
+sunp.det <- cbind( pred.sun[,c("Predicted", "lower", "upper") ], minsun.pp ) %>%
+  # define x and y values
+  ggplot(., aes( x = minsun.pp, y = Predicted ) ) + 
+  #choose preset look
+  theme_classic( base_size = 35 ) +
+  # add labels
+  labs( x = "Minutes after sunrise", y = "Detection probability" ) +
+  theme(text=element_text(size=75)) +
+  # add band of confidence intervals
+  geom_smooth( aes(ymin = lower, ymax = upper ), 
+               stat = "identity",
+               size = 5, alpha = 0.5, fill = "darkseagreen" ) +
+  # add mean line on top
+  geom_line( size = 5, color = "darkgreen" ) +
+  ylim(0,1)
+#view
+sunp.det
+
+
+ggsave("E:/gyrf_analysis/detection partial plots 20nov23/rock_minsun.png", width = 15, height = 15, dpi = 300)
+```
