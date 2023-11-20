@@ -365,7 +365,7 @@ obsvp.det <- pred.obs %>%
   geom_errorbar( aes(ymin = lower, ymax = upper ), 
                size = 4, width = 0.3 ) +
   scale_color_manual(values=c('darkblue','darkblue','darkblue')) +
-  ylim(0,0.8)
+  ylim(0,0.25)
 #view
 obsvp.det
 
@@ -393,7 +393,7 @@ julp.det <- cbind( pred.jul[,c("Predicted", "lower", "upper") ], julian.pp ) %>%
   #choose preset look
   theme_classic( base_size = 35 ) +
   # add labels
-  labs( x = "Julian date", y = "Detection probability" ) +
+  labs( x = "Day of the year", y = "Detection probability" ) +
   theme(text=element_text(size=75)) +
   # add band of confidence intervals
   geom_smooth( aes(ymin = lower, ymax = upper ), 
@@ -401,7 +401,7 @@ julp.det <- cbind( pred.jul[,c("Predicted", "lower", "upper") ], julian.pp ) %>%
                size = 5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
   geom_line( size = 5, color = "darkblue" ) +
-  ylim(0,.8)
+  ylim(0,.9)
 #view
 julp.det
 
@@ -437,7 +437,7 @@ windp.det <- cbind( pred.wind[,c("Predicted", "lower", "upper") ], wind.km ) %>%
                size = 5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
   geom_line( size = 5, color = "darkblue" ) +
-  ylim(0,.8)
+  ylim(0,.6)
 #view
 windp.det
 
@@ -472,7 +472,7 @@ sunp.det <- cbind( pred.sun[,c("Predicted", "lower", "upper") ], minsun.pp ) %>%
                size = 5, alpha = 0.5, fill = "lightblue3" ) +
   # add mean line on top
   geom_line( size = 5, color = "darkblue" ) +
-  ylim(0,.8)
+  ylim(0,.9)
 #view
 sunp.det
 
