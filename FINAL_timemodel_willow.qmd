@@ -42,10 +42,30 @@ timeFrame <- unmarkedFrameMPois(
 time.model <- multinomPois( ~ 1 + julian + min_after_sun + wind + observer ~ 1 + tundra + tussock + tallshrub + elev + offset(log(area)), data = timeFrame)
 
 
-summary(time.model)
-confint(time.model, type = "state")
-confint(time.model, type = "det")
+model_summary <- summary(time.model)
 
+state_confint <- as.data.frame(confint(time.model, type = "state"))
+det_confint <- as.data.frame(confint(time.model, type = "det"))
+
+
+state_summary <- as.data.frame(model_summary$state)
+det_summary <- as.data.frame(model_summary$det)
+
+
+# Round the values to two decimal places
+state_confint <- round(state_confint[ ,c(1:2)], 2)
+det_confint <- round(det_confint[ ,c(1:2)], 2)
+
+state_summary <- round(state_summary[ ,c(1:4)], 2)
+det_summary <- round(det_summary[ ,c(1:4)], 2)
+
+
+#save
+
+write.csv(state_summary, "E:/gyrf_analysis/willow_state_summary.csv")
+write.csv(det_summary, "E:/gyrf_analysis/willow_det_summary.csv")
+write.csv(state_confint, "E:/gyrf_analysis/willow_state_confint.csv")
+write.csv(det_confint, "E:/gyrf_analysis/willow_det_confint.csv")
 ```
 
 ## Prediction Maps
