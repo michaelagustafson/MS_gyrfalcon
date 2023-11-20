@@ -84,6 +84,10 @@ yRem_df <- as_tibble(yRem, rownames = "id")
 covs_join <- full_join(yRem_df, allCovs_std2)
 
 colnames(covs_join)[26] <- "elev"
+
+
+na_cells <- which(is.na(covs_join), arr.ind = TRUE)
+
 ```
 
 ```{r}
