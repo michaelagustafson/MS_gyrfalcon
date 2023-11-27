@@ -18,6 +18,7 @@ library(unmarked)
 library(raster)
 library(dplyr)
 library(ggplot2)
+library(RColorBrewer)
 
 ```
 
@@ -175,6 +176,7 @@ names(pred.surface) <- c("tundra", "lowshrub", "sparseveg", "elev", "area", "jul
 time.prediction <- predict(time.model, type = "state", newdata = pred.surface) 
 
 plot(time.prediction) 
+plot(time.prediction, axes = FALSE, col=colorRampPalette(brewer.pal(3,"Reds"))(100))
 
 #look at some stats
 cellStats(time.prediction, "sum") # 9 512 total abundance
