@@ -553,3 +553,41 @@ sunp.det
 
 ggsave("E:/gyrf_analysis/detection partial plots 20nov23/rock_minsun.png", width = 15, height = 15, dpi = 300)
 ```
+
+## Model Fit
+
+```{r}
+set.seed(1234)
+
+
+#fit stats for NB model
+fitstats.tm <- function(time.model) {
+  observed <- getY(time.model@data)
+  expected <- fitted(time.model)
+  resids <- residuals(time.model)
+  n.obs <- apply(observed,1,sum,na.rm=TRUE)
+  n.pred <- apply(expected,1,sum,na.rm=TRUE)
+  sse <- sum(resids^2, na.rm=TRUE)
+  chisq <- sum((observed - expected)^2 / expected, na.rm=TRUE)
+  freeTuke <- sum((sqrt(observed) - sqrt(expected))^2, na.rm=TRUE)
+  freeTuke.n <- sum((sqrt(n.obs)-sqrt(n.pred))^2, na.rm=TRUE)
+  sse.n <- sum( (n.obs-n.pred)^2, na.rm=TRUE)
+  chisq.n <- sum((n.obs-n.pred)^2/expected, na.rm=TRUE)
+  
+  out <- c(SSE=sse, Chisq=chisq, freemanTukey=freeTuke, SSE.n=sse.n, Chisq.n=chisq.n, freemanTukey.n=freeTuke.n)
+  return(out)
+}
+
+(gof.time.model <- parboot(time.model, fitstats.tm, nsim = 1000, report = 1))
+
+
+print(gof.time.model)
+
+
+saveRDS(gof.time.model, ("C:/Users/Ryan/OneDrive/Documents/MSgyrfalcon/ropt_gof_timemodel_27Nov23.rds"))
+
+# compute c-hat
+chat.tm <- gof.time.model@t0[2]/mean(gof.time.model@t.star[,2])
+chat.tm # 0.90
+
+```
