@@ -19,6 +19,7 @@ library(raster)
 library(dplyr)
 library(ggplot2)
 library(RColorBrewer)
+library(AICcmodavg)
 ```
 
 ## Import data
@@ -541,4 +542,11 @@ chat.tm <- gof.time.model@t0[2]/mean(gof.time.model@t.star[,2])
 chat.tm # 1.01
 
 
+```
+
+## Model Fit with nmixgof
+
+```{r}
+
+nmix.gof.time <- AICcmodavg::Nmix.gof.test(time.model, nsim = 1000, parallel = TRUE)
 ```
