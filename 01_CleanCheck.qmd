@@ -740,7 +740,6 @@ obs22.filter2 <- dplyr::filter(obs22.filter, flyover != "Y" | display == "Y")
     missing.check3 <- anti_join(all.obs3, all.env, by = 'id')
     missing.check4 <- anti_join(all.env, all.obs3, by = 'id')
 
-    # nothing missing now!
     ```
 
 Okay looks like there is environmental data for K4_T22_09 but no observational data - will double check original dataframe to confirm this is because no species were detected or species that were detected were filtered out because of distance.
