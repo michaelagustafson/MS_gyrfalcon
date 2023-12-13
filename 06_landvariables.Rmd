@@ -217,8 +217,7 @@ lc_list <- pland_coords %>%
 lc_stack2 <- stack(lc_list)
 
 #mask with dem.1k
-lc_stack2 <- resample(lc_stack2, dem.1k, method = 'ngb') #NOT SURE WHY I DIDN'T DO THIS HERE? Earlier it was hashed out..
-#lc_stack2 <- mask(lc_stack2, dem.1k)
+lc_stack2 <- resample(lc_stack2, dem.1k, method = 'ngb') 
 
 writeRaster(lc_stack2, filename=names(lc_stack2), bylayer=TRUE, format="GTiff", overwrite = TRUE)
 
