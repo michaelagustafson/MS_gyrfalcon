@@ -1,0 +1,279 @@
+---
+title: "habitat prep"
+format: docx
+editor: visual
+---
+
+# Extract Landscape Variables
+
+In this script I am extracting the percentage of each vegetation type and mean elevation within 800 x 800 m of each survey point (site).
+
+Vegetation/habitat data is from the Arctic and Boreal Vulnerability Experiment (Wang et al., 2019).
+
+Elevation data is from the 5m digital elevation model for Alaska from USGS.
+
+```{r}
+#| echo: false
+# Clean your workspace to reset your R environment
+rm( list = ls() )
+# Check that you are in the right project folder
+getwd()
+```
+
+## Library
+
+```{r}
+library(terra)
+library(sf)
+library(sp)
+library(rgdal)
+library(ggplot2)
+library(tidyverse)
+library(raster)
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(rgeos)
+library(here)
+library(reshape2)
+```
+
+## Import Data
+
+### Elevation
+
+Import DEM raster
+
+```{r dem}
+ak_dem <- raster::raster("E:/gyrf_analysis/gyrf3/data/dsm_mosaic_AK.tif")
+```
+
+Note: Have previously put all other rasters into the same CRS as the elevation/DEM raster
+
+### Vegetation
+
+```{r veg}
+### JENNY'S CODE:
+
+all.mos <- raster("E:/gyrf_analysis/gyrf3/jenny/all.mos.dem.tif")
+res(all.mos)
+plot(all.mos)
+
+```
+
+### Survey Locations
+
+```{r survey loc}
+
+# these points were previously put in same CRS as dem
+pts <- as.data.frame(readOGR("E:/gyrf_analysis/gyrf3/shapefiles","pts_3years_2"))
+
+# fix that one council id
+
+pts[38,1] <- "COUN_3_12_4"
+
+
+```
+
+### Study Area
+
+```{r}
+study.area <- readOGR("E:/gyrf_analysis/gyrf3/shapefiles", "gyrf_studyarea")
+crs(study.area)
+crs(ak_dem)
+#study.area.dem <- spTransform(study.area, crs(ak_dem))
+study.area.dem <- spTransform(study.area, crs(dem.800))
+
+```
+
+Step 1:
+
+a\. Crop and mask **elevation raster** with study area.
+
+```{r crop}
+# Step A: Crop and mask elevation raster with study area
+ak_dem.crop <- raster::crop(ak_dem, study.area.dem)
+ak_dem.crop.mask <- raster::mask(ak_dem.crop, study.area.dem)
+
+res(ak_dem.crop.mask)
+
+plot(ak_dem.crop.mask)
+
+```
+
+b\. Aggregate **elevation raster** from 5m res to 800m res
+
+```{r}
+# Step B: Aggregate cropped elevation raster from 5m res to 800m res
+
+# have to include na.rm = true or else elevations >500m come back into the picture!
+
+dem.800 <- aggregate(ak_dem.crop.mask, fact = 160, fun = mean, na.rm = TRUE)
+
+plot(dem.800)
+
+
+
+```
+
+c\. Remove pixels that result in a mean elevation \>500m
+
+```{r}
+# Step C: remove pixels that result in mean elevation >500m
+# dem.400[dem.400>=500] <- NA
+
+dem.800[dem.800 > 500] <- NA
+
+plot(dem.800)
+
+
+# save for easier code running later
+writeRaster(dem.800, "E:/gyrf_analysis/MSgyrfalcon/dem_800.tif", overwrite = TRUE)
+
+# Here I saved and closed the script and project and restarted then just loaded the dem_800.tif to clear out some memory
+
+dem.800 <- raster(here("E:/gyrf_analysis/MSgyrfalcon/dem_800.tif"))
+```
+
+## Crop land cover to study area
+
+```{r land mask}
+res(all.mos)
+
+mos.crop <- crop(all.mos, extent(dem.800))
+
+extent(mos.crop) <- extent(dem.800)
+
+
+mos.mask <- raster::mask(mos.crop, dem.800)
+plot(mos.mask)
+res(mos.mask)
+```
+
+## Resample to final elevation raster
+
+This will make the vegetation mosaic have the same resolution as the elevation model and will calculate the percentage of each vegetation type within the newly resampled pixel
+
+```{r}
+
+
+res(mos.crop)
+
+
+cov_pct <- lapply(unique(mos.crop), function(land_class) {
+             aggregate(mos.crop, fact=35, fun=function(vals, na.rm) {
+               sum(vals==land_class, na.rm=na.rm)/length(vals)
+             })
+           })
+
+cov_pct_stack <- stack(cov_pct)
+
+current_names <- names(cov_pct_stack)
+
+# Define new names for each layer
+new_names <- c("egforest", "decforest", "mixforest", "woodland", "lowshrub", "tallshrub", "openshrub", "tundra", "tussock", "sparseveg", "fen", "bog", "littoral", "barren", "water")  # Add as many names as there are layers
+
+# Assign the new names to the raster stack
+names(cov_pct_stack) <- new_names
+
+# Check the updated names
+print(names(cov_pct_stack))
+
+
+plot(cov_pct_stack)
+crs(cov_pct_stack)
+res(cov_pct_stack)
+
+#mask with dem.1k
+cov_pct_stack <- resample(cov_pct_stack, dem.800, method = 'ngb')
+
+
+# Save the stack to a new raster file
+writeRaster(cov_pct_stack, filename=names(cov_pct_stack), bylayer=TRUE, format="GTiff", overwrite = TRUE)
+```
+
+### Standardize each raster using 2 standard deviations
+
+```{r}
+# pull in a single raster to test standardise function
+barren <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/percent cover/barren.tif")
+
+```
+
+```{r standardize}
+
+standardise <- function(x, stdevs = 2) {
+  mean_x <- mean(x, na.rm = TRUE)
+  sd_x <- sd(x, na.rm = TRUE)
+  std_x <- (x - mean_x) / (stdevs * sd_x)
+  return(std_x)
+}
+
+# Apply the standardise function to each cell of the raster
+raster_standardized <- raster::calc(barren, standardise)
+
+
+
+```
+
+Now try on whole stack
+
+```{r}
+raster_stack_standardized <- stack(lapply(1:nlayers(cov_pct_stack), function(i) {
+  raster::calc(cov_pct_stack[[i]], standardise)
+}))
+
+names(raster_stack_standardized) <- new_names
+
+#save
+writeRaster(raster_stack_standardized, filename=names(raster_stack_standardized), bylayer=TRUE, format="GTiff", overwrite = TRUE)
+```
+
+Cool, I think that worked.
+
+Now pull the veg values for each survey point
+
+```{r}
+colnames(pts)[3] <- "longitude"; colnames(pts)[4] <- "latitude"
+
+extracted_values <- extract(raster_stack_standardized, pts[,c(3, 4)])
+                            
+extracted_values2 <- data.frame(site_id = pts$id, extracted_values)
+
+
+
+```
+
+Now for elevation:
+
+```{r}
+
+# Apply the standardise function to each cell of the raster
+elev_standardized <- raster::calc(dem.800, standardise)
+
+writeRaster(elev_standardized, filename=names(elev_standardized), bylayer=TRUE, format="GTiff", overwrite = TRUE)
+
+extracted_elev <- extract(elev_standardized, pts[,c(3, 4)])
+extracted_elev2 <- data.frame(site_id = pts$id, extracted_elev)
+
+final_standardized_df <- cbind(extracted_values2, extracted_elev2)
+final_standardized_df <- final_standardized_df[,-c(17)]
+
+write.csv(final_standardized_df, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_standardized_df.csv")
+```
+
+Do the same as above but the unstandardized version for partial prediction plots (which need the raw values to simulate the range of values)
+
+```{r}
+# veg  
+raw_values <- extract(cov_pct_stack, pts[,c(3, 4)]) 
+raw_values2 <- data.frame(site_id = pts$id, raw_values)  
+# elevation  
+raw_elev <- extract(dem.800, pts[,c(3, 4)]) 
+raw_elev2 <- data.frame(site_id = pts$id, raw_elev)
+
+
+raw_hab_vals <- cbind(raw_values2, raw_elev2)
+
+write.csv(raw_hab_vals, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/raw_hab_vals.csv")
+```
