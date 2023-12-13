@@ -1,0 +1,61 @@
+---
+title: "03_AddHabitat"
+format: html
+editor: visual
+---
+
+# Add extracted habitat data to environmental data
+
+In this script:
+
+Add the standardized vegetation and elevation values for each survey point (site) to the rest of the environmental data frame.
+
+Standardise numerical predictors by 2 standard deviations
+
+## Clear workspace
+
+```{r}
+# Clean your workspace to reset your R environment
+rm( list = ls() )
+# Check that you are in the right project folder
+getwd()
+```
+
+## Library
+
+```{r}
+library(dplyr)
+library(tidyr)
+```
+
+## Import data
+
+```{r}
+all.obs <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_obs_17Oct23.csv") 
+all.env <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_env_17Oct23.csv") 
+veg.std <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_standardized_df.csv")
+```
+
+### Standardize environmental point/site data
+
+```{r}
+# function to standardize:
+
+#genetic function to standardise covariates using Gelman's suggestion:
+standardise <- function( xmat, stdevs = 2, marg = c( 1, 2) ) { 
+  mean.xmat = mean( as.vector( xmat ), na.rm = TRUE )
+  sd.xmat = sd( as.vector( xmat ), na.rm = TRUE ) 
+  std.xmat = apply( xmat, marg, function( x ){
+    ( x - mean.xmat ) / (stdevs * sd.xmat ) } )
+  return( std.xmat )
+}
+
+
+env.mat <- as.matrix(all.env)
+```
+
+## Combine dataframes
+
+```{r}
+all.covs.std <- left_join(all.obs, all.env, by = 'id')
+```
