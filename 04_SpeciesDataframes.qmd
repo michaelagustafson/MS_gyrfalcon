@@ -1,0 +1,202 @@
+---
+title: "Species Dataframes"
+format: html
+editor: visual
+---
+
+# Species Dataframes
+
+In this script I am:
+
+1.  Separating each species into its own observation dataframe
+2.  Subsetting ptarmigan species to be male observations only
+
+## Clean workspace
+
+```{r}
+# Clean your workspace to reset your R environment
+rm( list = ls() )
+# Check that you are in the right project folder
+getwd()
+```
+
+## Library
+
+```{r}
+library(dplyr)
+library(tidyr)
+```
+
+## Load Data
+
+```{r}
+all.std <- read.csv("E:/gyrf_analysis/MSgyrfalcon/all_std.csv")
+```
+
+## Remove female ptarmigan
+
+```{r}
+wipt.male <- data.frame(all.std)
+
+# change all species codes of SQUIR to a 1 and all other species to 0
+wipt.male$species[wipt.male$species == "WIPT"] <- 1
+
+wipt.male$species[wipt.male$species != "1"] <- 0
+
+# change count to 0 for non SQUIR
+wipt.male$count[wipt.male$species == 0] <- 0
+
+# now to change counts for those obs that were females
+
+unique(wipt.male$sex[wipt.male$species == 1])
+
+# looking at original data notes for M/F sex to know exact number of males and females
+
+wipt.male[3135, 11] = "MMMF"
+wipt.male[3137, 11] = "MMF"
+
+wipt.male$sex[wipt.male$sex == "M,F"] <- "MF"
+wipt.male$sex[wipt.male$sex == "F,M"] <- "MF"
+wipt.male$sex[wipt.male$sex == "M,2U"] <- "MUU"
+
+
+#remove single F and single U
+
+wipt.male$species[wipt.male$sex == "F"] <- 0
+wipt.male$species[wipt.male$sex == "U"] <- 0
+
+wipt.male$count <- as.numeric(wipt.male$count)
+wipt.male$sex <- as.factor(wipt.male$sex)
+
+#MF
+wipt.male$count[wipt.male$species == 1 & wipt.male$sex == "MF"] <- wipt.male$count[wipt.male$species == 1 &wipt.male$sex == "MF"] - 1
+
+#MMF
+wipt.male$count[wipt.male$species == 1 & wipt.male$sex == "MMF"] <- wipt.male$count[wipt.male$species == 1 &wipt.male$sex == "MMF"] - 1
+
+#MMMF
+wipt.male$count[wipt.male$species == 1 & wipt.male$sex == "MMMF"] <- wipt.male$count[wipt.male$species == 1 &wipt.male$sex == "MMMF"] - 1
+
+#MUU
+wipt.male$count[wipt.male$species == 1 & wipt.male$sex == "MUU"] <- wipt.male$count[wipt.male$species == 1 & wipt.male$sex == "MUU"] - 2
+
+wipt.male$count[wipt.male$species == 0] <- 0
+
+# check for na values
+sum(is.na(wipt.male$time_int))
+#fix - this was a site where no species were detected
+wipt.male[7991, 5] <- 0
+# check again
+sum(is.na(wipt.male$time_int))
+
+```
+
+## Aggregate time intervals
+
+```{r}
+################### 5 TIME INTERVALS #############################
+# change time intervals to reflect intervals of 2 minutes
+wipt.male2 <- mutate(wipt.male, 
+                time_int = ifelse(wipt.male$time_int %in% 0:1, "1", 
+                                  ifelse(wipt.male$time_int %in% 2:3, "2", 
+                                         ifelse(wipt.male$time_int %in% 4:5, "3",
+                                                ifelse(wipt.male$time_int %in% 6:7, "4",
+                                                       ifelse(wipt.male$time_int %in% 8:9, "5", "NA"))))))
+
+
+# look at sample size
+
+wipt.male2$count <- as.integer(wipt.male2$count)
+sum(wipt.male2$count) # sample size 485
+```
+
+## Get counts and sites for each year
+
+```{r}
+# get number of sites with counts each year
+wipt.male19 <- subset(wipt.male2, year == "2019" & wipt.male2$count > 0)
+sum(wipt.male19$count) # 239 obs in 2019
+list(unique(wipt.male19$id)) # 118 sites in 19
+
+wipt.male21 <- subset(wipt.male2, year == "2021" & wipt.male2$count > 0)
+sum(wipt.male21$count) # 237 obs in 2021
+unique(wipt.male21$id) # 127 sites in 21
+
+wipt.male22 <- subset(wipt.male2, year == "2022" & wipt.male2$count > 0)
+sum(wipt.male22$count) # 9 obs in 2022
+unique(wipt.male22$id) # 5 sites in 22
+###################################################################
+
+```
+
+## Spread dataframe wide
+
+```{r}
+
+# condense counts in same time intervals at each site
+
+str(wipt.male2)
+wipt.male2$id <- as.factor(wipt.male2$id)
+wipt.male2$time_int <- as.factor(wipt.male2$time_int)
+wipt.male2$exact_distance <- as.factor(wipt.male2$exact_distance)
+wipt.male2$count <- as.integer(wipt.male2$count)
+
+wipt.male.agg2 <- aggregate(x = wipt.male2$count, 
+                      by = list(wipt.male2$id, wipt.male2$time_int),
+                      FUN = sum,
+                      na.action=NULL)
+
+names(wipt.male.agg2)[names(wipt.male.agg2) == "Group.1"] <- "id"
+names(wipt.male.agg2)[names(wipt.male.agg2) == "Group.2"] <- "time_int"
+names(wipt.male.agg2)[names(wipt.male.agg2) == "x"] <- "count"
+
+sum(wipt.male.agg2$count) # make sure sample size is still 485
+
+
+
+# spread dataframes:
+
+unique(wipt.male.agg2$id) # should end up with 988 levels
+
+wipt.male.wide <- wipt.male.agg2 %>%
+  dplyr::select(id, time_int, count) %>%
+  spread(key = time_int, value = count, fill = 0)
+
+# double check that sample size is still 485 and sites are 988
+sum(wipt.male.wide[,c(2:6)]) 
+unique(wipt.male.wide$id)
+
+
+# checks for missing data
+
+all.std$id <- as.factor(all.std$id)
+miss1 <- anti_join(all.std, wipt.male.wide, by = 'id') # clear
+miss2 <- anti_join(wipt.male.wide, all.std, by = 'id') # clear
+
+# nothing missing! 
+
+
+
+```
+
+## Combine aggregated count data with standardized covariates and other site info
+
+```{r final join}
+
+sub_df <- all.std[,c(2, 12:39)]
+df2_unique <- sub_df %>% distinct(id, .keep_all = TRUE)
+
+final_join2 <- left_join(wipt.male.wide, df2_unique, by = 'id')
+
+
+names(final_join2)[names(final_join2) == "extracted_elev"] <- "elev"
+```
+
+Save dataframe
+
+```{r}
+write.csv(final_join2, "E:/gyrf_analysis/MSgyrfalcon/wipt_final_df_28Dec23.csv")
+
+#####################################################
+
+```
