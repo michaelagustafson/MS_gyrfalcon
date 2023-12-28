@@ -364,3 +364,125 @@ write.csv(final_join_rock, "E:/gyrf_analysis/MSgyrfalcon/ropt_final_df_28Dec23.c
 #####################################################
 
 ```
+
+# Arctic ground squirrel
+
+## Aggregate time intervals
+
+```{r}
+
+squirs <- data.frame(all.std)
+
+# change all species codes of SQUIR to a 1 and all other species to 0
+squirs$species[squirs$species == "SQUIR"] <- 1
+squirs$species[squirs$species == "AGSQ"] <- 1
+
+squirs$species[squirs$species != "1"] <- 0
+
+# change count to 0 for non SQUIR
+squirs$count[squirs$species == 0] <- 0
+
+
+
+################### 5 TIME INTERVALS #############################
+# change time intervals to reflect intervals of 2 minutes
+squirs2 <- mutate(squirs, 
+                time_int = ifelse(squirs$time_int %in% 0:1, "1", 
+                                  ifelse(squirs$time_int %in% 2:3, "2", 
+                                         ifelse(squirs$time_int %in% 4:5, "3",
+                                                ifelse(squirs$time_int %in% 6:7, "4",
+                                                       ifelse(squirs$time_int %in% 8:9, "5", "NA"))))))
+
+
+# look at sample size
+
+squirs2$count <- as.integer(squirs2$count)
+sum(squirs2$count) # sample size 80
+
+```
+
+## Get counts and sites for each year
+
+```{r}
+# get number of sites with counts each year
+squirs.19 <- subset(squirs2, year == "2019" & squirs2$count > 0)
+sum(squirs.19$count) # 42 obs in 2019
+list(unique(squirs.19$id)) # 17 sites in 19
+
+squirs.21 <- subset(squirs2, year == "2021" & squirs2$count > 0)
+sum(squirs.21$count) # 35 obs in 2021
+unique(squirs.21$id) # 23 sites in 21
+
+squirs.22 <- subset(squirs2, year == "2022" & squirs2$count > 0)
+sum(squirs.22$count) # 3 obs in 2022
+unique(squirs.22$id) # 2 sites in 22
+###################################################################
+
+```
+
+## Spread dataframe wide
+
+```{r}
+# condense counts in same time intervals at each site
+
+str(squirs2)
+squirs2$id <- as.factor(squirs2$id)
+squirs2$time_int <- as.factor(squirs2$time_int)
+squirs2$exact_distance <- as.factor(squirs2$exact_distance)
+squirs2$count <- as.integer(squirs2$count)
+
+squir.agg2 <- aggregate(x = squirs2$count, 
+                      by = list(squirs2$id, squirs2$time_int),
+                      FUN = sum,
+                      na.action=NULL)
+
+names(squir.agg2)[names(squir.agg2) == "Group.1"] <- "id"
+names(squir.agg2)[names(squir.agg2) == "Group.2"] <- "time_int"
+names(squir.agg2)[names(squir.agg2) == "x"] <- "count"
+
+sum(squir.agg2$count) # make sure sample size is still 80
+
+
+
+# spread dataframes:
+
+unique(squir.agg2$id) # should end up with 988 levels
+
+squir.wide <- squir.agg2 %>%
+  dplyr::select(id, time_int, count) %>%
+  spread(key = time_int, value = count, fill = 0)
+
+# double check that sample size is still 80 and sites are 988
+sum(squir.wide[,c(2:6)]) 
+unique(squir.wide$id)
+
+
+# checks for missing data
+
+all.std$id <- as.factor(all.std$id)
+miss1 <- anti_join(all.std, squir.wide, by = 'id') # clear
+miss2 <- anti_join(squir.wide, all.std, by = 'id') # clear
+
+# nothing missing! 
+```
+
+## Combine aggregated count data with standardized covariates and other site info
+
+```{r}
+sub_df_squir <- all.std[,c(2, 12:39)]
+df4_unique <- sub_df_squir %>% distinct(id, .keep_all = TRUE)
+
+final_join_squir <- left_join(squir.wide, df4_unique, by = 'id')
+
+
+names(final_join_squir)[names(final_join_squir) == "extracted_elev"] <- "elev"
+```
+
+## Save dataframe
+
+```{r}
+write.csv(final_join_squir, "E:/gyrf_analysis/MSgyrfalcon/squir_final_df_28Dec23.csv")
+
+#####################################################
+
+```
