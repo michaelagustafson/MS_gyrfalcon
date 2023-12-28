@@ -33,6 +33,8 @@ library(tidyr)
 all.std <- read.csv("E:/gyrf_analysis/MSgyrfalcon/all_std.csv")
 ```
 
+# Willow Ptarmigan
+
 ## Remove female ptarmigan
 
 ```{r}
@@ -192,10 +194,172 @@ final_join2 <- left_join(wipt.male.wide, df2_unique, by = 'id')
 names(final_join2)[names(final_join2) == "extracted_elev"] <- "elev"
 ```
 
-Save dataframe
+## Save dataframe
 
 ```{r}
 write.csv(final_join2, "E:/gyrf_analysis/MSgyrfalcon/wipt_final_df_28Dec23.csv")
+
+#####################################################
+
+```
+
+# Rock Ptarmigan
+
+## Remove female ptarmigan
+
+```{r}
+ropt.male <- data.frame(all.std)
+
+# change all species codes of SQUIR to a 1 and all other species to 0
+ropt.male$species[ropt.male$species == "ROPT"] <- 1
+
+ropt.male$species[ropt.male$species != "1"] <- 0
+
+# change count to 0 for non SQUIR
+ropt.male$count[ropt.male$species == 0] <- 0
+
+# now to change counts for those obs that were females
+
+unique(ropt.male$sex[ropt.male$species == 1])
+
+# M   M,F   M,U  U  MF
+
+# check how many males are in M,F/U and MF detections
+
+# looking at original data notes for M/F sex to know exact number of males and females
+
+#remove single F and single U
+
+ropt.male$species[ropt.male$sex == "F"] <- 0
+ropt.male$species[ropt.male$sex == "U"] <- 0
+
+ropt.male$count <- as.numeric(ropt.male$count)
+ropt.male$sex <- as.factor(ropt.male$sex)
+
+# subtract females and unknowns from paired/group observations (all groups were of 2, one male and one female or unknown)
+
+#MF
+ropt.male$count[ropt.male$species == 1 & ropt.male$sex == "MF"] <- ropt.male$count[ropt.male$species == 1 &ropt.male$sex == "MF"] - 1
+
+#M,F
+ropt.male$count[ropt.male$species == 1 & ropt.male$sex == "M,F"] <- ropt.male$count[ropt.male$species == 1 &ropt.male$sex == "M,F"] - 1
+
+#M,U
+ropt.male$count[ropt.male$species == 1 & ropt.male$sex == "M,U"] <- ropt.male$count[ropt.male$species == 1 &ropt.male$sex == "M,U"] - 1
+
+
+ropt.male$count[ropt.male$species == 0] <- 0
+ropt.male$species[ropt.male$count == 0] <- 0
+
+
+sum(is.na(ropt.male$time_int))
+#fix - this was a site where no species were detected
+ropt.male[7991, 5] <- 0
+# check again
+sum(is.na(ropt.male$time_int))
+```
+
+## Aggregate time intervals
+
+```{r}
+################### 5 TIME INTERVALS #############################
+# change time intervals to reflect intervals of 2 minutes
+ropt.male2 <- mutate(ropt.male, 
+                time_int = ifelse(ropt.male$time_int %in% 0:1, "1", 
+                                  ifelse(ropt.male$time_int %in% 2:3, "2", 
+                                         ifelse(ropt.male$time_int %in% 4:5, "3",
+                                                ifelse(ropt.male$time_int %in% 6:7, "4",
+                                                       ifelse(ropt.male$time_int %in% 8:9, "5", "NA"))))))
+
+
+# look at sample size
+
+ropt.male2$count <- as.integer(ropt.male2$count)
+sum(ropt.male2$count) # sample size 55
+```
+
+## Get counts and sites for each year
+
+```{r}
+# get number of sites with counts each year
+ropt.male19 <- subset(ropt.male2, year == "2019" & ropt.male2$count > 0)
+sum(ropt.male19$count) # 31 obs in 2019
+list(unique(ropt.male19$id)) # 24 sites in 19
+
+ropt.male21 <- subset(ropt.male2, year == "2021" & ropt.male2$count > 0)
+sum(ropt.male21$count) # 14 obs in 2021
+unique(ropt.male21$id) # 13 sites in 21
+
+ropt.male22 <- subset(ropt.male2, year == "2022" & ropt.male2$count > 0)
+sum(ropt.male22$count) # 10 obs in 2022
+unique(ropt.male22$id) # 6 sites in 22
+###################################################################
+
+```
+
+## Spread dataframe wide
+
+```{r}
+
+# condense counts in same time intervals at each site
+
+str(ropt.male2)
+ropt.male2$id <- as.factor(ropt.male2$id)
+ropt.male2$time_int <- as.factor(ropt.male2$time_int)
+ropt.male2$exact_distance <- as.factor(ropt.male2$exact_distance)
+ropt.male2$count <- as.integer(ropt.male2$count)
+
+ropt.male.agg2 <- aggregate(x = ropt.male2$count, 
+                      by = list(ropt.male2$id, ropt.male2$time_int),
+                      FUN = sum,
+                      na.action=NULL)
+
+names(ropt.male.agg2)[names(ropt.male.agg2) == "Group.1"] <- "id"
+names(ropt.male.agg2)[names(ropt.male.agg2) == "Group.2"] <- "time_int"
+names(ropt.male.agg2)[names(ropt.male.agg2) == "x"] <- "count"
+
+sum(ropt.male.agg2$count) # make sure sample size is still 55
+
+
+
+# spread dataframes:
+
+unique(ropt.male.agg2$id) # should end up with 988 levels
+
+ropt.male.wide <- ropt.male.agg2 %>%
+  dplyr::select(id, time_int, count) %>%
+  spread(key = time_int, value = count, fill = 0)
+
+# double check that sample size is still 55 and sites are 988
+sum(ropt.male.wide[,c(2:6)]) 
+unique(ropt.male.wide$id)
+
+
+# checks for missing data
+
+all.std$id <- as.factor(all.std$id)
+miss1 <- anti_join(all.std, ropt.male.wide, by = 'id') # clear
+miss2 <- anti_join(ropt.male.wide, all.std, by = 'id') # clear
+
+# nothing missing! 
+```
+
+## Combine aggregated count data with standardized covariates and other site info
+
+```{r}
+sub_df_rock <- all.std[,c(2, 12:39)]
+df3_unique <- sub_df_rock %>% distinct(id, .keep_all = TRUE)
+
+final_join_rock <- left_join(ropt.male.wide, df3_unique, by = 'id')
+
+
+names(final_join_rock)[names(final_join_rock) == "extracted_elev"] <- "elev"
+```
+
+## Save dataframe
+
+```{r}
+write.csv(final_join_rock, "E:/gyrf_analysis/MSgyrfalcon/ropt_final_df_28Dec23.csv")
 
 #####################################################
 
