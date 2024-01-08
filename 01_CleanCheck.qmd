@@ -776,39 +776,9 @@ write.csv(all.obs4, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_obs_17Oct23.cs
 write.csv(all.env, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_env_17Oct23.csv")
 ```
 
-Now save and close, then reopen to clear workspace and data usage. We'll reload the final obs and env data sets to continue.
+# END SCRIPT
 
-## Add habitat data to environmental data
-
-I calculated and extracted the percentage of each habitat type within a 400m radius of each survey point. I will now join that data to its corresponding point.
-
-```{r add habitat}
-all.obs4 <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_obs_17Oct23.csv") 
-all.env <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/all_env_17Oct23.csv") 
-lc.vars <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/pland2_400r.csv") #these are the land cover characteristics and elevation we extracted in the previous code 
-
-# remove extra 'X' column from all.obs and site.vars
-all.obs4 <- all.obs4[,-c(1)]
-all.env <- all.env[,-c(1)]
-lc.vars <- lc.vars[,-c(1)]
-
-# fix that one council site that's name is always messed up
-
-lc.vars[8,1] <- "COUN_3_12_4"
-
-# and the temperature that's missing
-
-all.env[552,6] <- "42"
-
-
-all.env2 <- left_join(lc.vars, all.env, by = 'id')
-
-write.csv(all.env2, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_env_join_18Oct23.csv")
-
-all.env2 <- read.csv("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/final_env_join_18Oct23.csv")
-
-all.env2 <- all.env2[, -c(1)]
-```
+# 
 
 ## Remove female ptarmigan
 
@@ -1035,63 +1005,7 @@ write.csv(wipt.male.wide, "E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/wipt_male_wi
 
 ```
 
-## Scale numerical predictors
-
-```{r}
-# scale numerical predictors
-
-str(all.env2)
-
-jul.scaled <- scale(as.numeric(all.env2$julian))
-min.scaled <- scale(as.numeric(all.env2$min_after_sun))
-temp.scaled <- scale(as.numeric(all.env2$tempf))
-wind.scaled <- scale(all.env2$wind)
-t.scaled <- scale(all.env2$tundra)
-tuss.scaled <- scale(all.env2$tussock)
-ls.scaled <- scale(all.env2$lowshrub)
-ts.scaled <- scale(all.env2$tallshrub)
-os.scaled <- scale(all.env2$openshrub)
-b.scaled <- scale(all.env2$barren)
-spveg.scaled <- scale(all.env2$sparseveg)
-elev.scaled <- scale(all.env2$elev)
-egfor.scaled <- scale(all.env2$egforest)
-dec.scaled <- scale(all.env2$decforest)
-mix.scaled <- scale(all.env2$mixforest)
-wood.scaled <- scale(all.env2$woodland)
-fen.scaled <- scale(all.env2$fen)
-litt.scaled <- scale(all.env2$littoral)
-wat.scaled <- scale(all.env2$water)
-
-
-# create scaled dataframe
-all.env.scaled <- data.frame(all.env2)
-
-# replace variables with scaled ones
-all.env.scaled$julian <- jul.scaled
-all.env.scaled$min_after_sun <- min.scaled
-all.env.scaled$tempf <- temp.scaled
-all.env.scaled$wind <- wind.scaled
-all.env.scaled$tundra <- t.scaled
-all.env.scaled$tussock <- tuss.scaled
-all.env.scaled$lowshrub <- ls.scaled
-all.env.scaled$tallshrub <- ts.scaled
-all.env.scaled$openshrub <- os.scaled
-all.env.scaled$barren <- b.scaled
-all.env.scaled$sparseveg <- spveg.scaled
-all.env.scaled$elev <- elev.scaled
-all.env.scaled$egforest <- egfor.scaled
-all.env.scaled$decforest <- dec.scaled
-all.env.scaled$mixforest <- mix.scaled
-all.env.scaled$woodland <- wood.scaled
-all.env.scaled$fen <- fen.scaled
-all.env.scaled$littoral <- litt.scaled
-all.env.scaled$water <- wat.scaled
-
-
-# test correlation
-cor.mat <- Hmisc::rcorr(as.matrix(all.env.scaled[,c(2:16, 23, 27:28)]),type="pearson")
-cor.mat
-```
+## 
 
 ## Join time intervals and scaled environmental data
 
