@@ -29,7 +29,7 @@ library(AICcmodavg)
 ## Import data
 
 ```{r}
-allCovs_std <- read.csv("E:/gyrf_analysis/MSgyrfalcon/ropt_final_df_28Dec23.csv")
+allCovs_std <- read.csv("E:/gyrf_analysis/MSgyrfalcon/squir_final_df_28Dec23.csv")
 allCovs_std <- allCovs_std[,c(-1)]
 ```
 
@@ -147,8 +147,7 @@ names(pred.surface) <- c("tundra", "lowshrub", "sparseveg", "elev", "area", "jul
 time.prediction <- predict(time.model, type = "state", newdata = pred.surface) 
 
 plot(time.prediction) 
-plot(time.prediction, axes = FALSE, col=colorRampPalette(brewer.pal(3,"Greens"))(100))
-
+plot(time.prediction, axes = FALSE, col=colorRampPalette(brewer.pal(3,"Reds"))(100))
 
 
 #look at some stats
@@ -225,19 +224,19 @@ tund.t <- cbind( tun.t[,c("Predicted", "lower", "upper") ], tundra.pp ) %>%
   # define x and y values
   ggplot(., aes( x = tundra.pp, y = Predicted ) ) + 
   #choose preset look
-  ylim(0, 0.4) +
+  ylim(0, 1) +
   theme_classic( base_size = 30) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "Tundra", y = "Relative density (males/800m2)" ) +
+  labs( x = "Tundra", y = "Relative density (squirrel/800m2)" ) +
   # add band of confidence intervals
   theme(text=element_text(size=65)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 5, alpha = 0.5, fill = "darkseagreen" ) +
+               size = 5, alpha = 0.5, fill = "darksalmon" ) +
   # add mean line on top
-  geom_line( size = 5, color = "darkgreen")
+  geom_line( size = 5, color = "darkred")
 tund.t
 ```
 
@@ -251,24 +250,23 @@ low.t <- predict( time.model, type = "state", newdata = lowData,
                           appendData = TRUE )
 
 ### plot
-
 lowshrub.t <- cbind( low.t[,c("Predicted", "lower", "upper") ], lowshrub.pp ) %>%
   # define x and y values
   ggplot(., aes( x = lowshrub.pp, y = Predicted ) ) + 
   #choose preset look
-  ylim(0, 0.4) +
+  ylim(0, 1) +
   theme_classic( base_size = 30) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "Low shrub", y = "Relative density (males/800m2)" ) +
+  labs( x = "Low shrub", y = "Relative density (squirrels/800m2)" ) +
   # add band of confidence intervals
   theme(text=element_text(size=65)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 5, alpha = 0.5, fill = "darkseagreen" ) +
+               size = 5, alpha = 0.5, fill = "darksalmon" ) +
   # add mean line on top
-  geom_line( size = 5, color = "darkgreen")
+  geom_line( size = 5, color = "darkred")
 lowshrub.t
 ```
 
@@ -287,21 +285,20 @@ sparse.t <- cbind( sv.t[,c("Predicted", "lower", "upper") ], sparseveg.pp ) %>%
   # define x and y values
   ggplot(., aes( x = sparseveg.pp, y = Predicted ) ) + 
   #choose preset look
-  ylim(0, 0.4) +
+  ylim(0, 1) +
   theme_classic( base_size = 30) +
   # turn x axis into percent scale
   scale_x_continuous(labels = scales::percent_format(accuracy=1)) +
   # add labels
-  labs( x = "Sparse vegetation", y = "Relative density (males/800m2)" ) +
+  labs( x = "Sparse vegetation", y = "Relative density (squirrels/800m2)" ) +
   # add band of confidence intervals
   theme(text=element_text(size=65)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 5, alpha = 0.5, fill = "darkseagreen" ) +
+               size = 5, alpha = 0.5, fill = "darksalmon" ) +
   # add mean line on top
-  geom_line( size = 5, color = "darkgreen")
+  geom_line( size = 5, color = "darkred")
 sparse.t
-
 ```
 
 ### Elevation
@@ -319,17 +316,17 @@ elevation.t <- cbind( elev.t[,c("Predicted", "lower", "upper") ], elevation.pp )
   # define x and y values
   ggplot(., aes( x = elevation.pp, y = Predicted ) ) + 
   #choose preset look
-  ylim(0, 0.4) +
+  ylim(0, 1) +
   theme_classic( base_size = 30) +
   # add labels
-  labs( x = "Elevation (m) ", y = "Relative density (males/800m2)" ) +
+  labs( x = "Elevation (m) ", y = "Relative density (squirrels/800m2)" ) +
   # add band of confidence intervals
   theme(text=element_text(size=65)) +
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 5, alpha = 0.5, fill = "darkseagreen" ) +
+               size = 5, alpha = 0.5, fill = "darksalmon" ) +
   # add mean line on top
-  geom_line( size = 5, color = "darkgreen")
+  geom_line( size = 5, color = "darkred")
 elevation.t
 
 ```
@@ -401,11 +398,10 @@ obsvp.det <- pred.obs %>%
   # add confidence intervals
   geom_errorbar( aes(ymin = lower, ymax = upper ), 
                size = 4, width = 0.3 ) +
-  scale_color_manual(values=c('darkgreen','darkgreen','darkgreen')) +
+  scale_color_manual(values=c('darkred','darkred','darkred')) +
   ylim(0,0.25)
 #view
 obsvp.det
-
 ```
 
 ### Julian
@@ -432,9 +428,9 @@ julp.det <- cbind( pred.jul[,c("Predicted", "lower", "upper") ], julian.pp ) %>%
   # add band of confidence intervals
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 5, alpha = 0.5, fill = "darkseagreen" ) +
+               size = 5, alpha = 0.5, fill = "darksalmon" ) +
   # add mean line on top
-  geom_line( size = 5, color = "darkgreen" ) +
+  geom_line( size = 5, color = "darkred" ) +
   ylim(0,0.9)
 #view
 julp.det
@@ -466,12 +462,13 @@ windp.det <- cbind( pred.wind[,c("Predicted", "lower", "upper") ], wind.km ) %>%
   # add band of confidence intervals
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 5, alpha = 0.5, fill = "darkseagreen" ) +
+               size = 5, alpha = 0.5, fill = "darksalmon" ) +
   # add mean line on top
-  geom_line( size = 5, color = "darkgreen" ) +
+  geom_line( size = 5, color = "darkred" ) +
   ylim(0,0.6)
 #view
 windp.det
+
 ```
 
 ### Minutes after sunrise
@@ -498,10 +495,11 @@ sunp.det <- cbind( pred.sun[,c("Predicted", "lower", "upper") ], minsun.pp ) %>%
   # add band of confidence intervals
   geom_smooth( aes(ymin = lower, ymax = upper ), 
                stat = "identity",
-               size = 5, alpha = 0.5, fill = "darkseagreen" ) +
+               size = 5, alpha = 0.5, fill = "darksalmon" ) +
   # add mean line on top
-  geom_line( size = 5, color = "darkgreen" ) +
+  geom_line( size = 5, color = "darkred" ) +
   ylim(0,0.9)
 #view
 sunp.det
+
 ```
