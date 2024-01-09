@@ -81,8 +81,7 @@ pts[38,1] <- "COUN_3_12_4"
 study.area <- readOGR("E:/gyrf_analysis/gyrf3/shapefiles", "gyrf_studyarea")
 crs(study.area)
 crs(ak_dem)
-#study.area.dem <- spTransform(study.area, crs(ak_dem))
-study.area.dem <- spTransform(study.area, crs(dem.800))
+study.area.dem <- spTransform(study.area, crs(ak_dem))
 
 ```
 
@@ -144,10 +143,10 @@ mos.crop <- crop(all.mos, extent(dem.800))
 
 extent(mos.crop) <- extent(dem.800)
 
+extent(mos.crop)
+extent(dem.800)
 
-mos.mask <- raster::mask(mos.crop, dem.800)
-plot(mos.mask)
-res(mos.mask)
+
 ```
 
 ## Resample to final elevation raster
@@ -184,7 +183,7 @@ plot(cov_pct_stack)
 crs(cov_pct_stack)
 res(cov_pct_stack)
 
-#mask with dem.1k
+#mask with dem.800
 cov_pct_stack <- resample(cov_pct_stack, dem.800, method = 'ngb')
 
 
