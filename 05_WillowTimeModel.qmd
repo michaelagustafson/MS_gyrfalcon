@@ -116,6 +116,7 @@ tundra <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/percent cover standar
 
 tussock <- raster("E:/gyrf_analysis/MSgyrfalcon/MSgyrfalcon/percent cover standardized/tussock.tif")
 
+ncell(tallshrub)
 
 area.raster <- elev 
 values(area.raster) <- 800*800/10000 # area of a grid pixel, divided by 10000 to standardize
